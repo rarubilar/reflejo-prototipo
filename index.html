@@ -6,6 +6,13 @@
 <title>Reflejo · Lo Espejo</title>
 <meta name="description" content="Prototipo de Reflejo: el mapa de Lo Espejo para niñas, niños y adolescentes de 8 a 17 años.">
 <meta name="theme-color" content="#FFF5E6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Reflejo">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600..800&display=swap" rel="stylesheet">
@@ -33,6 +40,10 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
+/* phones: no grey tap flash, no pull-to-refresh bounce, no double-tap zoom on controls */
+html{-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}
+@media (max-width:500px),(max-height:700px) and (max-width:900px){html,body{overscroll-behavior:none;position:fixed;inset:0;width:100%}}
+button,a,.chip,.card{touch-action:manipulation}
 body{background:var(--stage);color:var(--stage-ink);font-family:var(--f-body);font-size:17px;line-height:1.4;-webkit-font-smoothing:antialiased;overflow:hidden}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 button:focus-visible,a:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--cat-aprender);outline-offset:3px}
@@ -182,7 +193,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,[tabindex]:focus-visibl
 .app[data-mode="night"] .tip{display:none}
 .app[data-mode="night"] .brand svg{display:none}
 .app[data-mode="night"] .brand{padding-left:14px}
-.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.pcard span:last-child{min-width:0;overflow-wrap:anywhere}
 .pcard{display:flex;gap:10px;align-items:center;min-height:64px;padding:10px;border:2px solid var(--ink);border-radius:16px;background:var(--surface);font-size:15px;line-height:1.2}
 .pcard.off{opacity:.6;border-style:dashed}
 .pcard .dot,.pbadge .dot{width:36px;height:36px;border-radius:12px;background:var(--c);color:var(--on-color);border:2px solid var(--ink);display:grid;place-items:center;flex:none}

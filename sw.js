@@ -1,7 +1,8 @@
 // Reflejo service worker: the app shell and its data work offline once visited.
 // Only active when the prototype is served over http(s); file:// can't register workers.
-const CACHE = 'reflejo-v5';
+const CACHE = 'reflejo-v6';
 const CORE = [
+  './manifest.webmanifest', './icon.svg',
   './', './index.html', './data/app_data.js',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
