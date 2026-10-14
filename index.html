@@ -1,0 +1,1551 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Reflejo · Lo Espejo</title>
+<meta name="description" content="Prototipo de Reflejo: el mapa de Lo Espejo para niñas, niños y adolescentes de 8 a 17 años.">
+<meta name="theme-color" content="#FFF5E6">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+/* ============ TOKENS (see 03_design/design_system.md §5-6) ============ */
+:root{
+  --bg:#FFF5E6; --surface:#FFFFFF; --surface-2:#FFEBD0; --ink:#1D1B33; --ink-soft:#4A4766;
+  --on-color:#1D1B33;
+  --sol:#FFC23D; --rojo:#E0442E;
+  --cat-deporte:#2DBE72; --cat-arte:#FF6FA3; --cat-aprender:#6FA0FF; --cat-aire:#9BD65A;
+  --cat-evento:#FF8A3D; --cat-ayuda:#B9A6FF;
+  --r-chip:12px; --r-btn:18px; --r-card:24px;
+  --bw:2.5px; --shadow:0 4px 0 var(--ink); --shadow-sm:0 3px 0 var(--ink);
+  --t-fast:120ms; --t-med:240ms; --t-slow:480ms;
+  --ease-out:cubic-bezier(.2,.8,.2,1); --ease-spring:cubic-bezier(.34,1.56,.64,1);
+  --f-display:"Bricolage Grotesque","Atkinson Hyperlegible",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --stage:#EFE4D2; --stage-ink:#1D1B33; --device:#15142A;
+  --tap:48px; --err-bg:#FFE3DD; --danger:#B3261E;
+}
+.app[data-mode="night"]{
+  --bg:#15142A; --surface:#23213F; --surface-2:#2E2B52; --ink:#FFF5E6; --ink-soft:#C9C4E8;
+  --sol:#FFD23F; --rojo:#FF6A4D; --err-bg:#4A2330; --danger:#FF8A80;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--stage);color:var(--stage-ink);font-family:var(--f-body);font-size:17px;line-height:1.4;-webkit-font-smoothing:antialiased;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--cat-aprender);outline-offset:3px}
+.ic{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* ============ STAGE: presenter + device ============ */
+.stage{height:100%;display:grid;grid-template-columns:minmax(280px,380px) auto;justify-content:center;align-items:center;gap:56px;padding:24px;
+  background:radial-gradient(circle at 12% 18%,#FFD9A0 0 90px,transparent 91px),radial-gradient(circle at 88% 82%,#C7E8A6 0 120px,transparent 121px),var(--stage)}
+.presenter{max-height:calc(100vh - 48px);overflow:auto;padding-right:6px}
+.presenter .logo{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.presenter h1{font-family:var(--f-display);font-size:44px;line-height:1;letter-spacing:-.02em}
+.presenter .kicker{font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#4A4766}
+.presenter p{font-size:15px;color:#4A4766;margin:10px 0}
+.presenter .ctl{margin-top:18px;background:#fff;border:var(--bw) solid #1D1B33;border-radius:20px;box-shadow:0 4px 0 #1D1B33;padding:16px}
+.presenter .ctl h2{font-family:var(--f-display);font-size:18px;margin-bottom:10px}
+.presenter .row{display:flex;flex-wrap:wrap;gap:8px}
+.pbtn{min-height:var(--tap);padding:8px 14px;border:var(--bw) solid #1D1B33;border-radius:14px;background:#fff;color:#1D1B33;font-weight:700;font-size:14px;box-shadow:0 3px 0 #1D1B33;transition:transform var(--t-fast),box-shadow var(--t-fast)}
+.pbtn:active{transform:translateY(3px);box-shadow:none}
+.pbtn[aria-pressed="true"]{background:#FFC23D}
+.presenter .pfacts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.presenter .pfact{background:#FFF5E6;border-radius:12px;padding:8px 10px}
+.presenter .pfact b{display:block;font-family:var(--f-display);font-size:24px;line-height:1.1}
+.presenter .pfact span{font-size:13px;color:#4A4766}
+.presenter small{display:block;font-size:12px;color:#4A4766;margin-top:10px}
+
+.device{width:390px;height:844px;border-radius:52px;border:11px solid var(--device);background:var(--device);box-shadow:0 30px 60px -20px rgba(29,27,51,.45),0 0 0 2px #2d2b48;position:relative;overflow:hidden}
+.device::before{content:"";position:absolute;top:10px;left:50%;transform:translateX(-50%);width:110px;height:30px;border-radius:20px;background:var(--device);z-index:50}
+@media (max-width:900px){.presenter{display:none}.stage{grid-template-columns:auto}}
+@media (max-width:500px),(max-height:700px) and (max-width:900px){
+  .stage{padding:0;display:block}
+  .device{width:100%;height:100dvh;border:0;border-radius:0;box-shadow:none}
+  .device::before{display:none}
+}
+
+/* ============ APP SHELL ============ */
+.app{position:absolute;inset:0;background:var(--bg);color:var(--ink);overflow:hidden;overflow:clip;border-radius:41px;transition:background var(--t-med)}
+@media (max-width:500px),(max-height:700px) and (max-width:900px){.app{border-radius:0}}
+.topbar{position:absolute;top:0;left:0;right:0;z-index:20;padding:46px 14px 8px;display:flex;align-items:center;gap:10px;pointer-events:none}
+@media (max-width:500px){.topbar{padding-top:max(12px,env(safe-area-inset-top))}}
+.topbar>*{pointer-events:auto}
+.brand{display:flex;align-items:center;gap:8px;background:var(--surface);border:var(--bw) solid var(--ink);border-radius:999px;padding:5px 14px 5px 6px;box-shadow:var(--shadow-sm);min-height:var(--tap)}
+.brand b{font-family:var(--f-display);font-size:19px;letter-spacing:-.01em}
+.brand .where{font-size:13px;color:var(--ink-soft);max-width:128px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar .spacer{flex:1}
+.iconbtn{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:var(--surface);color:var(--ink);border:var(--bw) solid var(--ink);box-shadow:var(--shadow-sm);transition:transform var(--t-fast),box-shadow var(--t-fast)}
+.iconbtn:active{transform:translateY(3px);box-shadow:none}
+.iconbtn.help{background:var(--cat-ayuda);color:var(--on-color)}
+
+.views{position:absolute;inset:0 0 84px 0}
+.view{position:absolute;inset:0;opacity:0;visibility:hidden;transform:translateX(var(--from,0));transition:opacity var(--t-med) var(--ease-out),transform var(--t-med) var(--ease-out),visibility 0s linear var(--t-med)}
+.view.on{opacity:1;visibility:visible;transform:none;transition:opacity var(--t-med) var(--ease-out),transform 320ms var(--ease-out)}
+.scroll{overflow:auto;height:100%;padding:104px 16px 24px;-webkit-overflow-scrolling:touch}
+@media (max-width:500px){.scroll{padding-top:76px}}
+
+/* bottom nav */
+.nav{position:absolute;left:0;right:0;bottom:0;height:84px;z-index:30;display:grid;grid-template-columns:repeat(4,1fr);background:var(--surface);border-top:var(--bw) solid var(--ink);padding:6px 8px calc(10px + env(safe-area-inset-bottom))}
+.nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:13px;font-weight:700;color:var(--ink-soft);border-radius:16px;min-height:56px;transition:color var(--t-fast)}
+.nav button .pill{display:grid;place-items:center;width:56px;height:32px;border-radius:999px;transition:background var(--t-med) var(--ease-spring),transform var(--t-med) var(--ease-spring)}
+.nav button[aria-current="page"]{color:var(--ink)}
+.nav button{position:relative}
+.newb{position:absolute;top:2px;left:calc(50% + 10px);min-width:28px;height:22px;padding:0 6px;border-radius:99px;background:var(--sol);color:var(--on-color);border:2px solid var(--ink);font:800 13px var(--f-display);display:grid;place-items:center;animation:pop 500ms var(--ease-spring)}
+.nav button[aria-current="page"] .pill{background:var(--sol);color:var(--on-color);border:2px solid var(--ink);transform:translateY(-2px)}
+
+/* ============ MAP VIEW ============ */
+#map{position:absolute;inset:0;background:#EDE6D8;z-index:0;isolation:isolate}
+.app[data-mode="night"] #map{background:#1c1b33}
+.app[data-mode="day"] #map .leaflet-tile-pane{filter:sepia(.15) saturate(1.1)}
+.leaflet-container{font-family:var(--f-body)}
+.leaflet-control-attribution{font-size:10px!important;background:rgba(255,255,255,.7)!important}
+.leaflet-control-zoom{display:none}
+.chips{position:absolute;left:0;right:0;top:100px;z-index:15;display:flex;gap:8px;overflow-x:auto;padding:4px 14px 10px;scrollbar-width:none}
+@media (max-width:500px){.chips{top:66px}}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;display:flex;align-items:center;gap:6px;min-height:var(--tap);padding:6px 14px 6px 8px;border-radius:999px;background:var(--surface);border:var(--bw) solid var(--ink);box-shadow:var(--shadow-sm);font-weight:700;font-size:15px;transition:transform var(--t-fast),box-shadow var(--t-fast),background var(--t-med)}
+.chip .dot{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--c,var(--surface-2));color:var(--on-color)}
+.chip .dot .ic{width:18px;height:18px}
+.chip[aria-pressed="true"]{background:var(--c,var(--sol));color:var(--on-color)}
+.chip[aria-pressed="true"] .dot{background:var(--surface);color:var(--ink)}
+.chip:active{transform:translateY(3px);box-shadow:none}
+
+.pin-wrap{background:none;border:0;display:flex;justify-content:center;align-items:flex-start}
+.plabel{position:absolute;top:calc(100% + 12px);left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--surface);color:var(--ink);border:2px solid var(--ink);border-radius:8px;padding:1px 7px;font:700 13px var(--f-body);pointer-events:none}
+.pin.place .plabel{top:calc(100% + 10px)}
+.pin{--c:var(--sol);width:42px;height:42px;border-radius:50%;background:var(--c);color:var(--on-color);border:var(--bw) solid var(--ink);box-shadow:var(--shadow-sm);display:grid;place-items:center;position:relative;transform-origin:50% 120%;animation:drop .55s var(--ease-spring) backwards;transition:transform var(--t-med) var(--ease-spring)}
+.pin::after{content:"";position:absolute;left:50%;bottom:-10px;transform:translateX(-50%);border:6px solid transparent;border-top:9px solid var(--ink)}
+.pin .ic{width:22px;height:22px}
+.pin.place{width:32px;height:32px;background:var(--surface);color:var(--ink)}
+.pin.place .ic{width:17px;height:17px;color:var(--ink)}
+.pin.place::before{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--c);opacity:.35}
+.pin.place .ic{position:relative}
+.pin .count{position:absolute;top:-8px;right:-10px;min-width:24px;height:24px;padding:0 5px;border-radius:999px;background:var(--ink);color:var(--bg);font-size:13px;font-weight:700;display:grid;place-items:center;border:2px solid var(--bg)}
+.pin.sel{transform:scale(1.25)}
+.pin.hi::before{content:"";position:absolute;inset:-9px;border-radius:50%;border:3px solid var(--sol);animation:ring 1.6s ease-out infinite}
+@keyframes ring{from{transform:scale(.85);opacity:1}to{transform:scale(1.45);opacity:0}}
+.pin .num{position:absolute;top:-10px;left:-10px;width:22px;height:22px;border-radius:50%;background:var(--sol);color:var(--on-color);border:2px solid var(--ink);font:800 13px var(--f-display);display:grid;place-items:center}
+.pin.done::before{content:"";position:absolute;inset:-6px;border-radius:50%;border:3px dashed var(--ink);opacity:.6}
+.me{width:30px;height:30px;border-radius:10px;background:var(--surface);color:var(--ink);border:2.5px solid var(--ink);box-shadow:var(--shadow-sm);display:grid;place-items:center}
+.me .ic{width:18px;height:18px}
+@keyframes drop{from{transform:translateY(-40px) scale(.6);opacity:0}}
+@keyframes pulse{0%{box-shadow:0 0 0 2.5px var(--ink),0 0 0 0 rgba(111,160,255,.5)}100%{box-shadow:0 0 0 2.5px var(--ink),0 0 0 22px rgba(111,160,255,0)}}
+
+.locbtn{position:absolute;right:14px;bottom:214px;z-index:15}
+.locpill{position:absolute;left:50%;transform:translateX(-50%);top:156px;z-index:16;display:none;align-items:center;gap:8px;background:var(--cat-aprender);color:var(--on-color);border:var(--bw) solid var(--ink);border-radius:999px;padding:6px 6px 6px 12px;font-weight:700;font-size:14px;box-shadow:var(--shadow-sm)}
+@media (max-width:500px){.locpill{top:122px}}
+.locpill.on{display:flex}
+.netpill{position:absolute;left:14px;right:14px;top:156px;z-index:16;display:none;gap:8px;align-items:center;background:var(--surface);color:var(--ink);border:var(--bw) dashed var(--ink);border-radius:16px;padding:8px 12px;font-size:14px;font-weight:700}
+@media (max-width:500px){.netpill{top:122px}}
+.netpill.on{display:flex}
+#map.offline{background:repeating-linear-gradient(45deg,var(--surface-2) 0 14px,var(--bg) 14px 28px)}
+.qrme{width:150px;height:150px;margin:8px auto;background:#fff;border:3px solid #1D1B33;border-radius:16px;display:grid;place-items:center}
+.friend{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--ink-soft)}
+.friend:last-child{border-bottom:0}
+.friend .av{width:40px;height:40px;border-radius:50%;background:var(--cat-arte);border:2px solid var(--ink);display:grid;place-items:center}
+.locpill button{background:var(--surface);color:var(--ink);border:2px solid var(--ink);border-radius:999px;padding:4px 14px;min-height:var(--tap);font-weight:700;font-size:15px}
+
+.carousel{position:absolute;left:0;right:0;bottom:10px;z-index:15}
+.carousel h2{font-family:var(--f-display);font-size:18px;margin:0 16px 8px;display:inline-block;background:var(--surface);border:2px solid var(--ink);border-radius:999px;padding:2px 12px}
+.cards{display:flex;gap:12px;overflow-x:auto;padding:2px 16px 10px;scroll-snap-type:x mandatory;scrollbar-width:none}
+.cards::-webkit-scrollbar{display:none}
+.card{flex:none;width:250px;scroll-snap-align:start;text-align:left;background:var(--surface);border:var(--bw) solid var(--ink);border-radius:var(--r-card);box-shadow:var(--shadow);padding:12px;display:grid;grid-template-columns:52px 1fr;gap:10px;align-items:center;transition:transform var(--t-fast),box-shadow var(--t-fast)}
+.card:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.badge{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:var(--c);color:var(--on-color);border:2px solid var(--ink)}
+.badge .ic{width:28px;height:28px}
+.card b{display:block;font-size:16px;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.meta{display:flex;flex-wrap:wrap;gap:4px 6px;margin-top:4px;font-size:13px;color:var(--ink-soft);align-items:center}
+.ev .meta{display:block;line-height:1.6}
+.ev .meta .ic{vertical-align:-3px;margin-right:2px}
+.meta .ic{width:15px;height:15px}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;padding:2px 8px;border-radius:999px;border:2px solid var(--ink);background:var(--surface);color:var(--ink)}
+.tag.free{background:var(--cat-aire);color:var(--on-color)}
+.tag.demo{background:var(--surface-2);border-style:dashed}
+.tag.age{background:var(--sol);color:var(--on-color)}
+
+/* mascot tip */
+.routecard{position:absolute;left:12px;right:12px;bottom:14px;z-index:18;display:none;grid-template-columns:52px 1fr 48px;gap:12px;align-items:center;background:var(--surface);border:var(--bw) solid var(--ink);border-radius:var(--r-card);box-shadow:var(--shadow);padding:12px}
+.routecard.on{display:grid;animation:peel 360ms var(--ease-spring) both}
+.routecard b{display:block;font-family:var(--f-display);font-size:20px}
+.routecard small{display:block;font-size:13px;color:var(--ink-soft);line-height:1.3}
+.tip{position:absolute;left:14px;right:70px;bottom:196px;z-index:16;display:flex;align-items:flex-end;gap:6px;pointer-events:none;opacity:0;transform:translateY(10px);transition:opacity var(--t-med),transform var(--t-med) var(--ease-spring)}
+.tip.on{opacity:1;transform:none}
+.tip .bubble{background:var(--surface);border:var(--bw) solid var(--ink);border-radius:18px 18px 18px 4px;padding:8px 12px;font-size:15px;box-shadow:var(--shadow-sm);pointer-events:auto}
+.chinco{width:64px;height:64px;flex:none;animation:bob 2.6s ease-in-out infinite}
+.chinco .eye{transform-origin:69px 42px;animation:blink 4.5s infinite}
+@keyframes bob{50%{transform:translateY(-4px)}}
+@keyframes blink{0%,94%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+.app[data-mode="night"] .tip{display:none}
+.app[data-mode="night"] .brand svg{display:none}
+.app[data-mode="night"] .brand{padding-left:14px}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pcard{display:flex;gap:10px;align-items:center;min-height:64px;padding:10px;border:2px solid var(--ink);border-radius:16px;background:var(--surface);font-size:15px;line-height:1.2}
+.pcard.off{opacity:.6;border-style:dashed}
+.pcard .dot,.pbadge .dot{width:36px;height:36px;border-radius:12px;background:var(--c);color:var(--on-color);border:2px solid var(--ink);display:grid;place-items:center;flex:none}
+.pbadge{width:230px;padding:18px;border:var(--bw) solid var(--ink);border-radius:24px;background:var(--surface);box-shadow:var(--shadow);display:grid;justify-items:center;gap:8px;text-align:center;animation:peel 600ms var(--ease-spring) both}
+.pbadge .dot{width:64px;height:64px;border-radius:20px}.pbadge .dot .ic{width:34px;height:34px}
+.pbadge b{font-family:var(--f-display);font-size:22px;line-height:1.1}
+.pbadge span:last-child{font-weight:700;color:var(--ink-soft)}
+.scale{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:8px 0 4px}
+.scale button{min-height:64px;border:var(--bw) solid var(--ink);border-radius:16px;background:var(--surface);box-shadow:var(--shadow-sm);font:800 24px var(--f-display);color:var(--ink)}
+.scale button[aria-pressed="true"]{background:var(--sol);color:var(--on-color);transform:translateY(3px);box-shadow:none}
+.faces[hidden]{display:none}
+.scale-l{display:flex;justify-content:space-between;font-size:13px;color:var(--ink-soft);margin-bottom:16px}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:var(--tap);padding:6px 0;font-weight:700;font-size:15px;text-align:left}
+.switch i{width:52px;height:30px;border-radius:99px;background:var(--surface-2);border:2px solid var(--ink);position:relative;flex:none;transition:background var(--t-med)}
+.switch i::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--ink);transition:transform var(--t-med) var(--ease-spring)}
+.switch[aria-pressed="true"] i{background:var(--cat-aire)}
+.switch[aria-pressed="true"] i::after{transform:translateX(22px)}
+.initials{font:800 26px var(--f-display);color:var(--on-color)}
+
+/* ============ SHEET ============ */
+.scrim{position:absolute;inset:0;background:rgba(21,20,42,.35);z-index:40;opacity:0;visibility:hidden;transition:opacity var(--t-med),visibility 0s linear var(--t-med)}
+.scrim.on{opacity:1;visibility:visible;transition:opacity var(--t-med)}
+.scrim:not(.on){pointer-events:none}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:41;max-height:82%;display:flex;flex-direction:column;background:var(--surface);border-top:var(--bw) solid var(--ink);border-radius:28px 28px 0 0;transform:translateY(105%);visibility:hidden;transition:transform var(--t-med) var(--ease-out),visibility 0s linear var(--t-med)}
+.sheet.on{transform:none;visibility:visible;transition:transform 360ms var(--ease-spring)}
+.sheet .grab{height:26px;display:grid;place-items:center;cursor:grab;touch-action:none;flex:none}
+.sheet .grab::before{content:"";width:48px;height:5px;border-radius:9px;background:var(--ink-soft);opacity:.5}
+.sheet.dragging{transition:none}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.12) rotate(-2deg)}100%{transform:scale(1)}}
+.act.pop,.btn.pop{animation:pop 420ms var(--ease-spring)}
+a.act{text-decoration:none;color:var(--ink)}
+.btn[aria-pressed="true"]{background:var(--cat-aire)}
+.act.pop .ic{animation:pop 420ms var(--ease-spring) 60ms}
+.sheet .body{overflow:auto;padding:8px 18px 22px}
+.sh-top{display:flex;align-items:center;gap:8px;margin-top:2px}
+.sh-top .spacer{flex:1}
+.sh-id{display:flex;align-items:center;gap:12px;margin:6px 0 8px}
+.sh-id .badge{width:56px;height:56px;border-radius:18px}
+.sh-id .meta{margin:0}
+.sheet h2{font-family:var(--f-display);font-size:28px;line-height:1.05;letter-spacing:-.015em}
+.blurb{font-size:18px;margin:6px 0 12px}
+.facts{display:grid;gap:10px;margin:10px 0 14px}
+.fact{display:grid;grid-template-columns:36px 1fr;gap:10px;align-items:start;font-size:16px}
+.fact .fi{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:var(--surface-2)}
+.fact small{display:block;color:var(--ink-soft);font-size:15px}
+.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 12px}
+.act{min-height:56px;border:var(--bw) solid var(--ink);border-radius:var(--r-btn);background:var(--surface);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-weight:700;font-size:15px;transition:transform var(--t-fast),box-shadow var(--t-fast),background var(--t-med)}
+.act:active{transform:translateY(3px);box-shadow:none}
+.act[aria-pressed="true"]{background:var(--cat-aire);color:var(--on-color)}
+.btn{width:100%;min-height:58px;border:var(--bw) solid var(--ink);border-radius:var(--r-btn);background:var(--sol);color:var(--on-color);box-shadow:var(--shadow);font-family:var(--f-display);font-weight:800;font-size:20px;display:flex;align-items:center;justify-content:center;gap:10px;padding:6px 16px;text-align:center;line-height:1.15;transition:transform var(--t-fast),box-shadow var(--t-fast)}
+.btn:active{transform:translateY(4px);box-shadow:none}
+.btn.ghost{background:var(--surface);color:var(--ink);font-size:17px;min-height:52px}
+.btn[disabled]{opacity:.5;pointer-events:none}
+.src{font-size:13px;color:var(--ink-soft);margin-top:14px}
+details.more{margin-top:10px;border:2px dashed var(--ink-soft);border-radius:14px;padding:8px 12px;font-size:14px;color:var(--ink-soft)}
+details.more a{display:inline-flex;align-items:center;min-height:var(--tap);font-weight:700;color:var(--ink)}
+.ov-mid{margin:auto 0}
+details.more summary{cursor:pointer;font-weight:700;min-height:var(--tap);display:flex;align-items:center}
+.list{display:grid;gap:10px;margin:8px 0}
+.row{display:grid;grid-template-columns:48px 1fr 24px;gap:12px;align-items:center;text-align:left;width:100%;padding:10px;border:2px solid var(--ink);border-radius:18px;background:var(--surface);min-height:64px}
+.row .badge{width:48px;height:48px;border-radius:14px}
+.row b{display:block;font-size:16px;line-height:1.2}
+.teenline{display:flex;align-items:center;gap:8px;background:var(--surface-2);border-radius:14px;padding:8px 12px;font-size:15px;margin-bottom:10px}
+
+/* ============ OVERLAY (check-in, onboarding, help) ============ */
+.overlay{position:absolute;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;opacity:0;visibility:hidden;transform:translateY(24px);transition:opacity var(--t-med),transform var(--t-med) var(--ease-out),visibility 0s linear var(--t-med)}
+.overlay.on{opacity:1;visibility:visible;transform:none;transition:opacity var(--t-med),transform var(--t-med) var(--ease-out)}
+.ov-body{flex:1;overflow:auto;padding:58px 20px 24px;display:flex;flex-direction:column}
+@media (max-width:500px){.ov-body{padding-top:max(20px,env(safe-area-inset-top))}}
+.ov-top{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.steps{display:flex;gap:6px;flex:1}
+.steps i{flex:1;height:8px;border-radius:9px;background:var(--surface-2);border:2px solid var(--ink)}
+.steps i.on{background:var(--sol)}
+.ov h1,.ov-body h1{font-family:var(--f-display);font-size:32px;line-height:1.02;letter-spacing:-.02em;margin:6px 0 8px}
+.lead{font-size:18px;color:var(--ink-soft);margin-bottom:16px}
+.agegrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:8px 0 14px}
+.agegrid button{aspect-ratio:1;border:var(--bw) solid var(--ink);border-radius:20px;background:var(--surface);box-shadow:var(--shadow-sm);font-family:var(--f-display);font-weight:800;font-size:26px;transition:transform var(--t-fast),box-shadow var(--t-fast),background var(--t-med)}
+.agegrid button[aria-pressed="true"]{background:var(--sol);color:var(--on-color);transform:translateY(3px);box-shadow:none}
+.note{display:flex;gap:10px;align-items:flex-start;background:var(--surface-2);border-radius:16px;padding:12px;font-size:15px;color:var(--ink-soft);margin:8px 0}
+.note .ic{color:var(--ink);margin-top:1px}
+.gustos{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:8px 0 14px}
+.gusto{border:var(--bw) solid var(--ink);border-radius:20px;background:var(--surface);box-shadow:var(--shadow-sm);padding:12px 6px;display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:700;font-size:15px;line-height:1.15;text-align:center;min-height:96px;transition:transform var(--t-fast),box-shadow var(--t-fast),background var(--t-med)}
+.gusto .ic{width:32px;height:32px}
+.gusto{position:relative}
+.gusto[aria-pressed="true"]::after{content:"✓";position:absolute;top:6px;right:8px;width:24px;height:24px;border-radius:50%;background:var(--surface);color:var(--ink);border:2px solid var(--ink);font-size:14px;display:grid;place-items:center}
+.gusto[aria-pressed="true"]{background:var(--c,var(--sol));color:var(--on-color);transform:translateY(3px);box-shadow:none}
+.tabs{display:grid;grid-template-columns:1fr 1fr;border:var(--bw) solid var(--ink);border-radius:16px;overflow:hidden;margin-bottom:12px}
+.tabs button{min-height:48px;font-weight:700}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.search{width:100%;min-height:52px;border:var(--bw) solid var(--ink);border-radius:16px;padding:10px 14px;font:inherit;background:var(--surface);color:var(--ink)}
+.opts{display:grid;gap:8px;margin-top:10px;max-height:300px;overflow:auto}
+.opt{min-height:52px;text-align:left;padding:10px 14px;border:2px solid var(--ink);border-radius:14px;background:var(--surface);font-size:16px}
+.opt[aria-pressed="true"]{background:var(--sol);color:var(--on-color)}
+.uvmap{width:100%;height:300px;border:var(--bw) solid var(--ink);border-radius:18px;background:var(--surface)}
+.uvmap path{fill:var(--surface-2);stroke:var(--ink);stroke-width:1.5;cursor:pointer;transition:fill var(--t-fast)}
+.uvmap path:hover{fill:#ffe0a3}
+.uvmap path.sel{fill:var(--sol)}
+.uvmap text{font:700 11px var(--f-body);fill:var(--ink);pointer-events:none}
+.phone-in .pre{white-space:nowrap;flex:none}
+.phone-in{display:flex;align-items:center;gap:8px;border:var(--bw) solid var(--ink);border-radius:16px;background:var(--surface);padding:0 14px;min-height:56px;font-size:20px;font-weight:700}
+.phone-in input{border:0;background:none;font:inherit;color:inherit;width:100%;min-height:52px;outline:none;letter-spacing:.06em}
+.err{color:var(--ink);font-weight:700;font-size:15px;margin-top:8px;border-radius:12px;display:flex;gap:8px;align-items:center}
+.err:not(:empty){background:var(--err-bg);padding:8px 12px}
+.ov-foot{padding:12px 20px calc(18px + env(safe-area-inset-bottom));display:grid;gap:10px}
+.hello{position:absolute;inset:auto 0 0 0;z-index:61;padding:20px 18px calc(22px + env(safe-area-inset-bottom));background:var(--surface);border-top:var(--bw) solid var(--ink);border-radius:30px 30px 0 0;transform:translateY(110%);visibility:hidden;transition:transform 420ms var(--ease-spring),visibility 0s linear 420ms}
+.hello.on{transform:none;visibility:visible;transition:transform 420ms var(--ease-spring)}
+.hello .near .nrow{display:flex;align-items:center;gap:8px;width:100%;min-height:var(--tap);text-align:left;border-radius:12px;padding:2px 6px;margin-left:-6px}
+.hello .near .nrow:active{background:var(--surface-2)}
+.hello .near .nt{display:grid;gap:1px;line-height:1.2}
+.hello .near .nt small{display:flex;align-items:center;gap:4px;font-size:13px;color:var(--ink-soft)}
+.hello .near .nt small .ic{width:15px;height:15px}
+.hello .near .nrow .ic:last-child{margin-left:auto;width:18px;height:18px}
+.hello .top{display:flex;gap:12px;align-items:center}
+.hello h1{font-family:var(--f-display);font-size:30px;line-height:1.02;letter-spacing:-.02em}
+.hello p{font-size:17px;color:var(--ink-soft);margin:10px 0 16px}
+.hello .stats{display:flex;gap:8px;margin:0 0 16px;flex-wrap:wrap}
+
+/* scanner + reward */
+.scan{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px}
+.viewfinder{width:230px;height:230px;border-radius:28px;position:relative;background:repeating-linear-gradient(45deg,#2b2950 0 12px,#302e58 12px 24px);display:grid;place-items:center;overflow:hidden}
+.viewfinder::before,.viewfinder::after{content:"";position:absolute;inset:14px;border:4px solid var(--sol);border-radius:18px;clip-path:polygon(0 0,30% 0,30% 5%,5% 5%,5% 30%,0 30%,0 70%,5% 70%,5% 95%,30% 95%,30% 100%,70% 100%,70% 95%,95% 95%,95% 70%,100% 70%,100% 30%,95% 30%,95% 5%,70% 5%,70% 0,100% 0,100% 100%,0 100%)}
+.viewfinder .laser{position:absolute;left:20px;right:20px;height:3px;background:var(--rojo);box-shadow:0 0 12px var(--rojo);animation:laser 1.8s ease-in-out infinite alternate}
+@keyframes laser{from{top:26px}to{top:200px}}
+.qrsign{width:120px;height:120px;background:#fff;border-radius:14px;padding:10px;border:3px solid #1D1B33;display:grid;place-items:center}
+.reward{position:relative;display:grid;place-items:center;margin:10px auto 6px;width:220px;height:220px}
+.sticker{width:180px;height:180px;filter:drop-shadow(0 5px 0 var(--ink))}
+.reward .sticker{animation:peel 700ms var(--ease-spring) both}
+@keyframes peel{from{transform:rotate(-24deg) scale(.3);opacity:0}}
+.burst i{position:absolute;left:50%;top:50%;width:14px;height:14px;background:var(--c);border:2px solid var(--ink);animation:burst 900ms var(--ease-out) forwards}
+.burst i.s{clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);border:0;width:20px;height:20px}
+.burst i.c{border-radius:50%}
+@keyframes burst{from{transform:translate(-50%,-50%) scale(.2);opacity:1}to{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) rotate(var(--r)) scale(1);opacity:0}}
+.progress{height:16px;border-radius:99px;border:2px solid var(--ink);background:var(--surface-2);overflow:hidden}
+.progress i{display:block;height:100%;background:var(--cat-aire);border-right:2px solid var(--ink);transition:width 800ms var(--ease-out)}
+.faces{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:8px 0 16px}
+.face{border:var(--bw) solid var(--ink);border-radius:20px;background:var(--surface);box-shadow:var(--shadow-sm);min-height:92px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-weight:700;font-size:14px}
+.face svg{width:40px;height:40px}
+.face[aria-pressed="true"]{background:var(--sol);color:var(--on-color);transform:translateY(3px);box-shadow:none}
+.falta{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 16px}
+.falta button[aria-pressed="true"]::after{content:"✓";font-weight:800}
+.falta button{display:flex;align-items:center;gap:6px;min-height:var(--tap);padding:6px 12px;border:2px solid var(--ink);border-radius:999px;background:var(--surface);font-weight:700;font-size:15px}
+.falta button[aria-pressed="true"]{background:var(--cat-ayuda);color:var(--on-color)}
+.falta .ic{width:18px;height:18px}
+textarea.note-in{width:100%;min-height:80px;border:2px solid var(--ink);border-radius:14px;padding:10px;font:inherit;background:var(--surface);color:var(--ink);resize:none}
+h3.sec{font-family:var(--f-display);font-size:19px;margin:18px 0 8px}
+.card.wish{background:var(--surface-2);border-style:dashed;box-shadow:none}
+.sms{background:var(--surface);border:2px solid var(--ink);border-radius:18px 18px 18px 4px;padding:10px 12px;font-size:15px;margin:6px 0 8px;max-width:92%}
+.sms small{display:block;color:var(--ink-soft);font-weight:700;margin-bottom:4px}
+.hello .near{display:grid;gap:6px;margin:0 0 14px}
+.hello .near div{display:flex;align-items:center;gap:8px;font-size:15px}
+.hello .near .n{width:24px;height:24px;border-radius:50%;background:var(--sol);border:2px solid var(--ink);font:800 13px var(--f-display);display:grid;place-items:center;flex:none}
+
+/* ============ AGENDA / ALBUM / YO / AYUDA ============ */
+.pagehead h1{font-family:var(--f-display);font-size:34px;line-height:1;letter-spacing:-.02em}
+.pagehead p{color:var(--ink-soft);margin:6px 0 12px}
+.day{margin:14px 0 6px;font-weight:700;font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft)}
+.ev{display:grid;grid-template-columns:64px 1fr;gap:12px;align-items:center;width:100%;text-align:left;border:var(--bw) solid var(--ink);border-radius:20px;background:var(--surface);box-shadow:var(--shadow-sm);padding:10px;margin-bottom:10px}
+.ev .date{width:64px;height:64px;border-radius:16px;background:var(--c);color:var(--on-color);border:2px solid var(--ink);display:grid;place-items:center;text-align:center;line-height:1}
+.ev .date b{font-family:var(--f-display);font-size:24px;display:block}
+.ev .date span{font-size:12px;font-weight:700;text-transform:uppercase}
+.stickers{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stk{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;font-size:13px;line-height:1.15;min-height:48px}
+.stk svg{width:96px;height:96px}
+.stk.off svg{opacity:.4;filter:grayscale(1)}
+button.stk,button.pcard{width:100%;color:var(--ink);transition:transform var(--t-fast)}
+button.pcard{text-align:left}
+button.stk:active,button.pcard:active{transform:translateY(3px)}
+.backpill{display:inline-flex;align-items:center;gap:4px;min-height:var(--tap);padding:4px 14px 4px 8px;border:var(--bw) solid var(--ink);border-radius:999px;background:var(--surface);box-shadow:var(--shadow-sm);font-weight:700;font-size:15px}
+.backpill:active{transform:translateY(3px);box-shadow:none}
+.hcard button.call{font-size:15px}
+.rewards{display:grid;gap:10px}
+.rw{border:var(--bw) solid var(--ink);border-radius:20px;background:var(--surface);padding:12px;box-shadow:var(--shadow-sm)}
+.rw .top{display:flex;justify-content:space-between;gap:8px;font-weight:700;margin-bottom:8px}
+.rw.got{background:var(--cat-aire);color:var(--on-color)}
+.news{display:flex;gap:12px;align-items:center;border:var(--bw) dashed var(--ink);border-radius:20px;padding:12px;margin:6px 0 14px;background:var(--surface)}
+.news .ic{width:32px;height:32px}
+.box{border:var(--bw) solid var(--ink);border-radius:20px;background:var(--surface);padding:14px;margin-bottom:12px;box-shadow:var(--shadow-sm)}
+.box h2{font-family:var(--f-display);font-size:20px;margin-bottom:6px}
+.box ul{padding-left:20px;display:grid;gap:6px;font-size:17px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:12px;padding:8px 0;border-bottom:1px dashed var(--ink-soft);font-size:17px}
+.kv span{white-space:nowrap;color:var(--ink-soft)}
+.kv b{text-align:right}
+.kv:last-child{border-bottom:0}
+.avatar{width:72px;height:72px;border-radius:50%;background:var(--sol);border:var(--bw) solid var(--ink);display:grid;place-items:center;flex:none}
+.btn.danger{background:var(--surface);color:var(--danger);border-color:var(--danger);box-shadow:0 4px 0 var(--danger);font-size:17px}
+.help-ov{background:#F3EFFF}
+.app[data-mode="night"] .help-ov{background:#1E1C3A}
+.hl{display:grid;gap:10px}
+.hcard{border:var(--bw) solid var(--ink);border-radius:20px;background:var(--surface);padding:14px}
+.hcard b{display:block;font-size:17px}
+.hcard p{font-size:15px;color:var(--ink-soft);margin:4px 0 8px}
+.hcard.urgent a{display:flex;width:100%;min-height:56px;margin-top:8px;justify-content:center;font-size:18px}
+.hcard a,.hcard .call{display:inline-flex;align-items:center;gap:6px;min-height:var(--tap);padding:6px 14px;border:2px solid var(--ink);border-radius:14px;font-weight:700;color:var(--ink);text-decoration:none;background:var(--cat-ayuda)}
+.hcard.urgent{background:#FFE3DD;color:#1D1B33}
+.hcard.urgent p{color:#4A4766}
+.app[data-mode="night"] .hcard.urgent{background:#4a2330;color:#FFF5E6}
+.app[data-mode="night"] .hcard.urgent p{color:#f1d6dc}
+
+/* toast */
+.toast{position:absolute;left:16px;right:16px;top:50px;z-index:80;background:var(--ink);color:var(--bg);border-radius:16px;padding:12px 16px;font-weight:700;font-size:15px;box-shadow:0 4px 0 rgba(0,0,0,.25);transform:translateY(-16px);opacity:0;transition:all var(--t-med) var(--ease-spring);pointer-events:none}
+.toast.on{transform:none;opacity:1}
+
+/* ============ PLANNER (municipal view, demo) ============ */
+.planner{position:fixed;inset:0;z-index:200;background:#F6F1E7;color:#1D1B33;overflow:auto;display:none;padding:24px}
+.planner.on{display:block}
+.planner .ph{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.planner h1{font-family:var(--f-display);font-size:30px;letter-spacing:-.02em}
+.planner .grid{display:grid;grid-template-columns:1.2fr 1fr;gap:16px}
+@media (max-width:900px){.planner .grid{grid-template-columns:1fr}}
+.planner .panel{background:#fff;border:var(--bw) solid #1D1B33;border-radius:20px;padding:16px;box-shadow:0 4px 0 #1D1B33}
+.planner .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+@media (max-width:900px){.planner .kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:#fff;border:var(--bw) solid #1D1B33;border-radius:18px;padding:12px 14px}
+.kpi b{font-family:var(--f-display);font-size:30px;display:block;line-height:1.05}
+.kpi span{font-size:15px;color:#4A4766}
+.kpi.demo{border-style:dashed}
+.planner table{width:100%;border-collapse:collapse;font-size:14px}
+.planner th,.planner td{text-align:right;padding:6px 8px;border-bottom:1px solid #e3dccd}
+.planner th:first-child,.planner td:first-child{text-align:left}
+.planner .bar{display:grid;grid-template-columns:150px 1fr 44px;gap:8px;align-items:center;font-size:14px;margin:6px 0}
+.planner .bar i{display:block;height:18px;border-radius:6px;background:#B9A6FF;border:2px solid #1D1B33}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:13px;margin-top:8px}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend i{width:16px;height:16px;border-radius:4px;border:2px solid #1D1B33}
+#uvsvg path{stroke:#1D1B33;stroke-width:1.5}
+#uvsvg text{font:700 12px var(--f-body);fill:#1D1B33;paint-order:stroke;stroke:#fff;stroke-width:3px}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition-duration:1ms!important}
+}
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <!-- Presenter panel: only on desktop, for showing the prototype to the municipality and CIT-UAI -->
+  <aside class="presenter" aria-label="Panel de presentación">
+    <div class="logo">
+      <svg width="56" height="56" viewBox="0 0 120 120" aria-hidden="true"><use href="#chinco"/></svg>
+      <div><div class="kicker">Prototipo · Iteración <span id="iterNo">5</span> (+ revisión final)</div><h1>Reflejo</h1></div>
+    </div>
+    <p>El mapa de Lo Espejo para niñas, niños y adolescentes de 8 a 17 años. Encuentran algo que hacer cerca, van, hacen check-in en el lugar y le cuentan a la comuna qué falta.</p>
+    <div class="ctl">
+      <h2>Controles de la demo</h2>
+      <div class="row" role="group" aria-label="Modo por edad">
+        <button class="pbtn" data-demo-mode="day">8–12 · Día</button>
+        <button class="pbtn" data-demo-mode="night">13–17 · Noche</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="pbtn" data-demo="reset">Reiniciar recorrido</button>
+        <button class="pbtn" data-demo="guardian">Vista del adulto</button>
+        <button class="pbtn" data-demo="planner">Vista municipio</button>
+      </div>
+    </div>
+    <div class="ctl">
+      <h2>Datos reales de Lo Espejo</h2>
+      <div class="pfacts" id="pFacts"></div>
+      <small>Fuentes: visor CIT-UAI "Oportunidades NNA Comunidad", INE Censo 2024 por manzana, © OpenStreetMap. Eventos y uso: simulados, marcados "demo".</small>
+    </div>
+  </aside>
+
+  <div class="device">
+    <div class="app" id="app" data-mode="day">
+      <header class="topbar">
+        <button class="brand" id="brandBtn" aria-label="Reflejo, ir al mapa">
+          <svg width="34" height="34" viewBox="0 0 120 120" aria-hidden="true"><use href="#chinco"/></svg>
+          <b>Reflejo</b><span class="where" id="where">Lo Espejo</span>
+        </button>
+        <span class="spacer"></span>
+        <button class="iconbtn help" id="helpBtn" aria-label="Ayuda"><svg class="ic"><use href="#i-ayuda"/></svg></button>
+      </header>
+
+      <main class="views">
+        <section class="view on" id="v-map" aria-label="Mapa">
+          <div id="map" role="application" aria-label="Mapa de Lo Espejo"></div>
+          <div class="chips" id="chips" role="toolbar" aria-label="Filtrar"></div>
+          <div class="locpill" id="locPill" role="status"><svg class="ic" style="width:18px;height:18px"><use href="#i-target"/></svg>Ubicación activa <button id="locStop">Detener</button></div>
+          <div class="netpill" id="netPill" role="status"><svg class="ic" style="width:18px;height:18px" aria-hidden="true"><use href="#i-info"/></svg>Sin internet: el mapa de calles no cargó, pero los lugares sí.</div>
+          <button class="iconbtn locbtn" id="locBtn" aria-label="Usar mi ubicación"><svg class="ic"><use href="#i-target"/></svg></button>
+          <div class="tip" id="tip"><svg class="chinco" viewBox="0 0 120 120" aria-hidden="true"><use href="#chinco"/></svg><div class="bubble" id="tipText"></div></div>
+          <div class="carousel"><h2 id="carTitle">Cerca de ti</h2><div class="cards" id="cards"></div></div>
+          <div class="routecard" id="routeCard" role="status"></div>
+        </section>
+        <section class="view" id="v-agenda" aria-label="Agenda"><div class="scroll" id="agenda"></div></section>
+        <section class="view" id="v-album" aria-label="Álbum"><div class="scroll" id="album"></div></section>
+        <section class="view" id="v-yo" aria-label="Yo"><div class="scroll" id="yo"></div></section>
+      </main>
+
+      <nav class="nav" aria-label="Principal">
+        <button data-view="map" aria-current="page"><span class="pill"><svg class="ic"><use href="#i-mapa"/></svg></span>Mapa</button>
+        <button data-view="agenda"><span class="pill"><svg class="ic"><use href="#i-agenda"/></svg></span>Agenda</button>
+        <button data-view="album"><span class="pill"><svg class="ic"><use href="#i-album"/></svg></span><span id="albumLbl">Álbum</span></button>
+        <button data-view="yo"><span class="pill"><svg class="ic"><use href="#i-yo"/></svg></span>Yo</button>
+      </nav>
+
+      <div class="scrim" id="scrim"></div>
+      <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Detalle" inert><div class="grab" id="grab" aria-hidden="true"></div><div class="body" id="sheetBody"></div></section>
+      <section class="overlay" id="ov" role="dialog" aria-modal="true"></section>
+      <section class="hello" id="hello" aria-label="Bienvenida" inert></section>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+</div>
+
+<section class="planner" id="planner" aria-label="Vista municipio"></section>
+
+<!-- ============ ICONS + MASCOT ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-futbol" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.6l3.4 2.5-1.3 4h-4.2l-1.3-4zM12 3v4.6M20.6 9.6l-5.2.5M17.3 19.3l-3.2-5.2M6.7 19.3l3.2-5.2M3.4 9.6l5.2.5"/></symbol>
+  <symbol id="i-basquet" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3v18M5.6 5.6c3 2.5 3 10.3 0 12.8M18.4 5.6c-3 2.5-3 10.3 0 12.8"/></symbol>
+  <symbol id="i-voley" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3c-1.2 4 0 7 0 9s-4 5-8.2 5.6M12 12c3 1 6 .2 8.6-2.4M12 12c2 2 3 5 2.3 8.7"/></symbol>
+  <symbol id="i-tenis" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.8c3 2.8 3 9.6 0 12.4M18.4 5.8c-3 2.8-3 9.6 0 12.4"/></symbol>
+  <symbol id="i-hockey" viewBox="0 0 24 24"><path d="M8 3l5.6 13.4c.6 1.5 2 2.6 3.6 2.6H21"/><circle cx="6.5" cy="18.5" r="2.3"/></symbol>
+  <symbol id="i-patin" viewBox="0 0 24 24"><path d="M5 3.5h5.5v7l6.6 2c1.7.5 2.9 2 2.9 3.8V17H5z"/><circle cx="8" cy="20.2" r="1.7"/><circle cx="17" cy="20.2" r="1.7"/></symbol>
+  <symbol id="i-marciales" viewBox="0 0 24 24"><path d="M3 10h18v4H3z"/><path d="M10.5 14l-3 7M13.5 14l3 7"/><rect x="10" y="8.5" width="4" height="7" rx="1.2"/></symbol>
+  <symbol id="i-escalada" viewBox="0 0 24 24"><path d="M2.5 20.5L9.5 9l4 6 2.5-4 5.5 9.5z"/><path d="M9.5 9V3.5l4.5 1.7-4.5 1.7"/></symbol>
+  <symbol id="i-fuerza" viewBox="0 0 24 24"><path d="M6.5 7.5v9M3.5 10v4M17.5 7.5v9M20.5 10v4M6.5 12h11"/></symbol>
+  <symbol id="i-baile" viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="2.1"/><path d="M12 7.5v6.5l-3.5 7M12 14l3.5 7M5.5 5.5l6.5 3.5 6.5-3.5"/></symbol>
+  <symbol id="i-musica" viewBox="0 0 24 24"><path d="M9 18V5.5l10.5-2.5v13"/><circle cx="6.5" cy="18" r="2.6"/><circle cx="17" cy="16" r="2.6"/></symbol>
+  <symbol id="i-robotica" viewBox="0 0 24 24"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 8V5M9.2 12.8h.01M14.8 12.8h.01M9.5 16h5M2.8 12v3.5M21.2 12v3.5"/><circle cx="12" cy="3.6" r="1.2"/></symbol>
+  <symbol id="i-estudio" viewBox="0 0 24 24"><path d="M3 5.5c2.5-1 6-1 9 1 3-2 6.5-2 9-1V19c-2.5-1-6-1-9 1-3-2-6.5-2-9-1z"/><path d="M12 6.5V20"/></symbol>
+  <symbol id="i-parque" viewBox="0 0 24 24"><path d="M12 15v6M8 21h8"/><path d="M12 2.8c3.6 0 6.3 2.8 6.3 6.2 0 3.6-2.9 6.1-6.3 6.1S5.7 12.6 5.7 9c0-3.4 2.7-6.2 6.3-6.2z"/></symbol>
+  <symbol id="i-juegos" viewBox="0 0 24 24"><path d="M3 21L6.8 3.5h10.4L21 21M5.4 10h13.2"/><path d="M10 3.5v10.5M14 3.5v10.5M8.8 14h6.4v2.3H8.8z"/></symbol>
+  <symbol id="i-cultura" viewBox="0 0 24 24"><path d="M3.5 3.5h11v6.3a5.5 5.5 0 0 1-11 0z"/><path d="M6.8 8h.01M11.2 8h.01M7.2 12c1.2 1.1 2.4 1.1 3.6 0"/><path d="M15 8.5h5.5v5.2a5.5 5.5 0 0 1-9.2 4"/></symbol>
+  <symbol id="i-cancha" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M12 5v14"/><circle cx="12" cy="12" r="2.8"/></symbol>
+  <symbol id="i-cine" viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="11.5" rx="2"/><path d="M3 9l1.8-5h15.4L21 9M8.5 4L7 9M13.5 4L12 9M18.5 4L17 9"/></symbol>
+  <symbol id="i-evento" viewBox="0 0 24 24"><path d="M12 2.8l2.7 5.7 6.2.8-4.6 4.3 1.2 6.2L12 16.8l-5.5 3 1.2-6.2-4.6-4.3 6.2-.8z"/></symbol>
+  <symbol id="i-ayuda" viewBox="0 0 24 24"><path d="M12 20.3s-8-4.9-8-10.6a4.5 4.5 0 0 1 8-2.8 4.5 4.5 0 0 1 8 2.8c0 5.7-8 10.6-8 10.6z"/></symbol>
+  <symbol id="i-bici" viewBox="0 0 24 24"><circle cx="5.8" cy="16" r="3.6"/><circle cx="18.2" cy="16" r="3.6"/><path d="M5.8 16L9.5 9h6.2l2.5 7M9.5 9L8 6H6.3M12 16l-2.5-7M14 6h2.2l-.5 3"/></symbol>
+  <symbol id="i-mapa" viewBox="0 0 24 24"><path d="M3 6.5L9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z"/><path d="M9 4v13.5M15 6.5V20"/></symbol>
+  <symbol id="i-agenda" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-album" viewBox="0 0 24 24"><circle cx="7" cy="7" r="3.6"/><circle cx="17" cy="7" r="3.6"/><circle cx="7" cy="17" r="3.6"/><path d="M17 13.5v7M13.5 17h7"/></symbol>
+  <symbol id="i-yo" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20.5c1.5-4 4.5-6 8-6s6.5 2 8 6"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-walk" viewBox="0 0 24 24"><circle cx="13.5" cy="4" r="1.9"/><path d="M10 21l2.6-6.6L10.2 11l3-3.4 2 3.6h3.2M12.6 14.4l2.6 2.6v4M10.2 11l-3.2 2"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="5.8" r="2.6"/><circle cx="18" cy="18.2" r="2.6"/><path d="M8.3 10.8l7.4-3.7M8.3 13.2l7.4 3.7"/></symbol>
+  <symbol id="i-save" viewBox="0 0 24 24"><path d="M6 3.5h12V21l-6-4-6 4z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5 10-11"/></symbol>
+  <symbol id="i-qr" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="6" height="6" rx="1"/><rect x="14.5" y="3.5" width="6" height="6" rx="1"/><rect x="3.5" y="14.5" width="6" height="6" rx="1"/><path d="M14.5 14.5H17V17M20.5 14.5v.01M14.5 20.5h6v-3"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5v-3a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.01"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9.5H4z"/><path d="M10 20.5v-6h4v6"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.5"/><path d="M2.5 20c1-3.5 3.5-5.5 6.5-5.5s5.5 2 6.5 5.5M16 5.3a3.3 3.3 0 0 1 0 6.4M18 14.8c1.8.8 3 2.6 3.5 5.2"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol>
+  <symbol id="i-luz" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5 1.1 1.3 1.1 2.2h5c0-.9.5-1.7 1.1-2.2A6 6 0 0 0 12 3z"/></symbol>
+  <symbol id="i-agua" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></symbol>
+  <symbol id="i-escudo" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></symbol>
+  <symbol id="i-wc" viewBox="0 0 24 24"><circle cx="7" cy="4.5" r="1.8"/><circle cx="17" cy="4.5" r="1.8"/><path d="M5.5 21v-6H4.5L6 8h2.5L10 15H9v6M15.5 21V8h3v6.5M15.5 14.5h3M12 3v18"/></symbol>
+  <symbol id="i-sol" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></symbol>
+  <symbol id="i-luna" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M11 3c.7 4.6 2.9 6.8 7.5 7.5-4.6.7-6.8 2.9-7.5 7.5-.7-4.6-2.9-6.8-7.5-7.5C8.1 9.8 10.3 7.6 11 3z"/><path d="M19 15.5c.3 1.8 1 2.5 2.8 2.8-1.8.3-2.5 1-2.8 2.8-.3-1.8-1-2.5-2.8-2.8 1.8-.3 2.5-1 2.8-2.8z"/></symbol>
+
+  <!-- Chinco, the chincol (Zonotrichia capensis), mural style -->
+  <symbol id="chinco" viewBox="0 0 120 120">
+    <g stroke="#1D1B33" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M52 100l-3 13M68 100l3 13" stroke="#E07A3C" stroke-width="4"/>
+      <ellipse cx="60" cy="74" rx="35" ry="30" fill="#B98052"/>
+      <ellipse cx="63" cy="82" rx="22" ry="17" fill="#F4E4C9"/>
+      <path d="M28 70c6-12 22-14 30-6-4 14-18 22-30 16z" fill="#8A5A36"/>
+      <path d="M33 72l14-4M35 78l12-4" fill="none" stroke-width="2.5"/>
+      <path d="M38 58c10 10 34 10 44 0l2 8c-12 10-36 10-48 0z" fill="#C8642E"/>
+      <path d="M44 26l7-18 7 13 7-12 5 17z" fill="#9C968C"/>
+      <circle cx="60" cy="40" r="24" fill="#9C968C"/>
+      <path d="M44 24c4 6 5 12 4 18M72 22c-3 6-4 11-3 17" fill="none" stroke-width="4"/>
+      <path d="M81 42l15 5-15 5z" fill="#FFC23D"/>
+      <g class="eye"><circle cx="69" cy="42" r="7" fill="#fff"/><circle cx="70" cy="43" r="3.4" fill="#1D1B33" stroke="none"/></g>
+    </g>
+    <circle cx="55" cy="51" r="5" fill="#FF9BB8" opacity=".7"/>
+  </symbol>
+</svg>
+
+<script src="data/app_data.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// Uncaught exceptions don't reach console listeners in some headless tools; mirror them.
+window.addEventListener('error', e => console.error('[reflejo]', e.message, e.lineno));
+(() => {
+'use strict';
+const D = window.APP_DATA;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const app = $('#app');
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const CENTER = [-33.5205, -70.6887];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const icon = (n, cls = 'ic') => `<svg class="${cls}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+
+/* ---------- vocab ---------- */
+const CATS = {
+  deporte: {label: 'Deporte', icon: 'futbol'},
+  arte: {label: 'Música y arte', icon: 'musica'},
+  aprender: {label: 'Aprender', icon: 'estudio'},
+  aire: {label: 'Aire libre', icon: 'parque'},
+  evento: {label: 'Eventos', icon: 'evento'},
+};
+const PLACE = {
+  parque: {cat: 'aire', icon: 'parque', label: 'Plaza o parque'},
+  juegos: {cat: 'aire', icon: 'juegos', label: 'Juegos infantiles'},
+  maquinas: {cat: 'aire', icon: 'fuerza', label: 'Máquinas de ejercicio'},
+  skate: {cat: 'aire', icon: 'patin', label: 'Skatepark'},
+  biblioteca: {cat: 'aprender', icon: 'estudio', label: 'Biblioteca'},
+  cultura: {cat: 'arte', icon: 'cultura', label: 'Espacio cultural'},
+  sede: {cat: 'aire', icon: 'users', label: 'Sede vecinal'},
+  cancha: {cat: 'deporte', icon: 'cancha', label: 'Cancha'},
+};
+const BLURB = {
+  futbol: 'Entrena, juega partidos y arma equipo.', basquet: 'Aprende a botar, pasar y encestar.',
+  voley: 'Saques, remates y trabajo en equipo.', tenis: 'Raqueta, pelota y ganas de moverte.',
+  hockey: 'Stick, pelota y velocidad.', patin: 'Aprende a patinar y a hacer figuras.',
+  marciales: 'Disciplina, respeto y defensa personal.', escalada: 'Trepa, salta y supera obstáculos.',
+  fuerza: 'Entrena tu cuerpo al aire libre.', baile: 'Mueve el cuerpo con música.',
+  musica: 'Ritmo, instrumentos y escenario.', robotica: 'Arma y programa robots.',
+  estudio: 'Aprende cosas nuevas con apoyo.', cine: 'Película al aire libre con tu barrio.',
+};
+const INTERESTS = [
+  {id: 'futbol', label: 'Fútbol', icon: 'futbol', cat: 'deporte', types: ['futbol']},
+  {id: 'basquet', label: 'Básquet y vóley', icon: 'basquet', cat: 'deporte', types: ['basquet', 'voley']},
+  {id: 'baile', label: 'Baile', icon: 'baile', cat: 'arte', types: ['baile']},
+  {id: 'musica', label: 'Música', icon: 'musica', cat: 'arte', types: ['musica']},
+  {id: 'marciales', label: 'Artes marciales', icon: 'marciales', cat: 'deporte', types: ['marciales']},
+  {id: 'escalada', label: 'Escalar y parkour', icon: 'escalada', cat: 'deporte', types: ['escalada', 'fuerza']},
+  {id: 'patin', label: 'Patines, hockey y tenis', icon: 'patin', cat: 'deporte', types: ['patin', 'hockey', 'tenis']},
+  {id: 'ciencia', label: 'Robótica y estudio', icon: 'robotica', cat: 'aprender', types: ['robotica', 'estudio']},
+  {id: 'aire', label: 'Plazas y aire libre', icon: 'parque', cat: 'aire', types: []},
+];
+const BIRDS = ['Chincol', 'Tiuque', 'Zorzal', 'Queltehue', 'Picaflor', 'Diuca', 'Tordo', 'Loica'];
+const ADJ = ['Veloz', 'Audaz', 'Genial', 'Feliz', 'Bacán', 'Estelar'];
+
+/* ---------- state (localStorage is a convenience; the app works without it) ---------- */
+const KEY = 'reflejo.v1';
+const FRESH = {onboarded: false, age: null, home: null, homeLabel: null, interests: [], guardian: 'none',
+  consent: false, nick: null, saved: [], going: [], stickers: [], ratings: 0, filter: 'para-ti', mode: 'day', loc: false};
+let S;
+try { S = Object.assign({}, FRESH, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch { S = {...FRESH}; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} };
+
+/* ---------- geometry ---------- */
+const R = 6371000, rad = d => d * Math.PI / 180;
+function dist(a, b) {
+  const dLat = rad(b[0] - a[0]), dLon = rad(b[1] - a[1]);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a[0])) * Math.cos(rad(b[0])) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+const walkMin = m => Math.max(1, Math.round(m * 1.3 / 75)); // street detour factor, 4.5 km/h
+function inside(ll, ring) {
+  let hit = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [yi, xi] = ring[i], [yj, xj] = ring[j];
+    if ((yi > ll[0]) !== (yj > ll[0]) && ll[1] < (xj - xi) * (ll[0] - yi) / (yj - yi) + xi) hit = !hit;
+  }
+  return hit;
+}
+const centroid = ring => [ring.reduce((s, p) => s + p[0], 0) / ring.length, ring.reduce((s, p) => s + p[1], 0) / ring.length];
+const uvOf = ll => (D.uv.find(u => inside(ll, u.ring)) || {}).uv;
+const home = () => S.home || CENTER;
+
+/* ---------- items: every thing on the map ---------- */
+const ITEMS = [];
+D.activities.forEach(a => a.sites.forEach((s, i) => ITEMS.push({
+  id: `${a.id}-${i}`, kind: 'act', a, site: s, cat: a.cat, type: a.type, icon: a.type, name: a.name, ll: s.ll, ages: a.ages})));
+D.events.forEach(e => ITEMS.push({id: e.id, kind: 'event', e, cat: 'evento', type: e.type, icon: e.type === 'musica' ? 'musica' : e.type === 'cine' ? 'cine' : e.type === 'futbol' ? 'futbol' : 'estudio', name: e.name, ll: e.ll, ages: e.ages, demo: true}));
+D.places.forEach(p => { const m = PLACE[p.kind]; if (!m) return;
+  ITEMS.push({id: p.id, kind: 'place', p, cat: m.cat, type: p.kind, icon: m.icon, name: p.name, ll: p.ll, ages: [0, 99], minor: !p.named || p.kind === 'cancha'}); });
+
+// group items that share a spot into one location (e.g. the Gimnasio at Av. Américo Vespucio 3300)
+const LOCS = new Map();
+ITEMS.forEach(it => {
+  const k = it.ll.map(x => x.toFixed(4)).join(',');
+  if (!LOCS.has(k)) LOCS.set(k, {key: k, ll: it.ll, items: []});
+  const L = LOCS.get(k); L.items.push(it); it.loc = L;
+});
+// Workshops are recorded by street address ("9 SUR 7105"). Kids find places by what they are:
+// use a named school, park or library within 100 m, else "Cancha/Sede + street".
+const titleCase = t => t.toLowerCase().replace(/(^|[\s/(])(\p{L})/gu, (m, a, b) => a + b.toUpperCase()).replace(/\b(De|Del|Con|Y)\b/g, w => w.toLowerCase());
+const streetOf = a => titleCase(a.replace(/[,.]?\s*(n°\s*)?\d+[\w-]*\s*$/i, '').replace(/^\s*Avenida\s+/i, 'Av. ').trim());
+const LANDMARKS = [...D.schools.map(x => ({name: x.name, ll: x.ll})),
+  ...D.places.filter(p => p.named && p.kind !== 'cancha').map(p => ({name: p.name, ll: p.ll}))];
+LOCS.forEach(L => {
+  const named = L.items.find(i => i.kind === 'place' && i.p.named);
+  const act = L.items.find(i => i.kind === 'act');
+  L.uv = uvOf(L.ll);
+  if (named || !act) { L.name = named ? named.name : L.items[0].name; return; }
+  L.address = titleCase(act.site.address);
+  const lm = LANDMARKS.map(n => ({n, d: dist(n.ll, L.ll)})).sort((a, b) => a.d - b.d)[0];
+  if (lm && lm.d < 100) { L.name = lm.n.name; return; }
+  const court = D.places.some(p => p.kind === 'cancha' && dist(p.ll, L.ll) < 70);
+  L.name = /\d/.test(act.site.address) || / con |\//i.test(act.site.address)
+    ? `${court ? 'Cancha' : 'Sede'} ${streetOf(act.site.address.split(/ con |\//i)[0])}` : titleCase(act.site.address);
+});
+const shortName = n => n.replace(/^(Centro Educacional|Escuela Básica|Escuela Especial|Escuela|Colegio|Liceo)\s+/i, '');
+
+/* ---------- filters ---------- */
+const ageOk = it => S.age == null || (S.age >= it.ages[0] && S.age <= it.ages[1]);
+const interestTypes = () => INTERESTS.filter(i => S.interests.includes(i.id)).flatMap(i => i.types);
+function show(it, zoom) {
+  if (!ageOk(it)) return false;
+  const f = S.filter;
+  if (f === 'para-ti') {
+    if (it.kind === 'place') return !it.minor && (S.interests.length === 0 || S.interests.includes('aire') || it.cat !== 'aire' || zoom >= 16);
+    if (it.kind === 'event') return true;
+    const t = interestTypes();
+    return t.length === 0 || t.includes(it.type);
+  }
+  if (f === 'todo') return !it.minor || zoom >= 16;
+  if (it.cat !== f) return false;
+  return !it.minor || zoom >= 15 || f === 'aire' || f === 'deporte';
+}
+
+/* ============ MAP ============ */
+let map = null, markers = [], meMarker = null, tiles = null, selKey = null;
+let HILITE = [], tileErr = 0, tileOk = 0, LABELS = new Set();
+function fitNearby() {  // home + the 6 nearest visible places, clear of chips and carousel
+  if (!map) return;
+  const near = [...LOCS.values()].filter(L => L.visible && L.visible.length)
+    .sort((a, b) => dist(home(), a.ll) - dist(home(), b.ll)).slice(0, 6);
+  if (!near.length) return;
+  map.fitBounds(window.L.latLngBounds([home(), ...near.map(L => L.ll)]), {paddingTopLeft: [30, 170], paddingBottomRight: [30, 250], maxZoom: 16, animate: !REDUCED});
+}
+function ensureVisible() {  // never leave the kid looking at an empty map
+  if (!map) return;
+  const {x: w, y: h} = map.getSize();  // count pins whose whole body is clear of chips (top) and carousel (bottom)
+  const clear = [...LOCS.values()].filter(L => L.visible && L.visible.length).filter(L => {
+    const p = map.latLngToContainerPoint(L.ll); return p.x > 20 && p.x < w - 20 && p.y > 225 && p.y < h - 210; });
+  if (clear.length < 3) fitNearby();
+}
+const pinLabel = it => { const n = it.name.replace(/^(Talleres?|Escuela|Programa)\s+(de\s+)?/i, ''); const c = n[0].toUpperCase() + n.slice(1); return c.length > 16 ? c.slice(0, 15) + '…' : c; };
+function net() {  // streets need internet; pins, filters and data don't
+  const off = !navigator.onLine || (tileErr > 3 && tileOk === 0);
+  $('#netPill').classList.toggle('on', off); $('#map').classList.toggle('offline', off);
+}
+addEventListener('offline', net); addEventListener('online', () => { tileErr = 0; net(); });  // location keys lit up on the hello screen (value before asks)
+// ?offline=1 simulates no internet for the map tiles (to show and test the offline state)
+const ESRI = new URLSearchParams(location.search).has('offline') ? 'https://offline.invalid/' : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
+const TILES = {  // keyless Esri basemaps: base + a separate street-name layer
+  day: ['World_Light_Gray_Base', 'World_Light_Gray_Reference'],
+  night: ['World_Dark_Gray_Base', 'World_Dark_Gray_Reference'],
+};
+function initMap() {
+  if (!window.L) return fallbackMap();
+  map = L.map('map', {zoomControl: false, attributionControl: true, minZoom: 13, maxZoom: 18,
+    maxBounds: [[-33.56, -70.74], [-33.48, -70.64]]}).setView(home(), 15);
+  setTiles();
+  D.uv.forEach(u => L.polyline(u.ring, {color: '#1D1B33', weight: 1.2, opacity: .35, dashArray: '4 6', interactive: false}).addTo(map));
+  D.bike.forEach(b => L.polyline(b, {color: '#1FA463', weight: 5, opacity: .85, dashArray: '8 7', interactive: false}).addTo(map));
+  map.on('moveend', () => renderPins(false));  // after zoom and pan: labels depend on screen position
+  map.on('click', closeSheet);
+}
+function setTiles() {
+  if (!map) return;
+  if (tiles) tiles.forEach(t => map.removeLayer(t));
+  tiles = TILES[S.mode].map((name, i) => L.tileLayer(`${ESRI}${name}/MapServer/tile/{z}/{y}/{x}`, {
+    maxNativeZoom: 16, maxZoom: 18, pane: i ? 'overlayPane' : 'tilePane',
+    attribution: i ? '' : 'Mapa © Esri, HERE, Garmin, © OpenStreetMap'}).addTo(map));
+  tiles[0].on('tileerror', () => { tileErr++; net(); }).on('tileload', () => { tileOk++; net(); });
+}
+function locCat(L) {
+  const vis = L.visible;
+  const pri = ['evento', 'arte', 'deporte', 'aprender', 'aire'];
+  const act = vis.filter(i => i.kind !== 'place');
+  const pool = act.length ? act : vis;
+  return pri.find(c => pool.some(i => i.cat === c)) || 'aire';
+}
+function pinHTML(L, i) {
+  const cat = locCat(L), isPlace = L.visible.every(x => x.kind === 'place');
+  const main = L.visible.find(x => x.kind !== 'place') || L.visible[0];
+  const n = L.visible.filter(x => x.kind !== 'place').length;
+  const done = S.stickers.includes(L.key) ? ' done' : '';
+  const sel = L.key === selKey ? ' sel' : '';
+  const hi = HILITE.indexOf(L.key);
+  return `<div class="pin${isPlace ? ' place' : ''}${done}${sel}${hi >= 0 ? ' hi' : ''}" style="--c:var(--cat-${cat});animation-delay:${Math.min(i * 30, 900)}ms">${icon(main.icon)}${n > 1 && hi < 0 ? `<span class="count">${n}</span>` : ''}${hi >= 0 ? `<span class="num">${hi + 1}</span>` : ''}${LABELS.has(L.key) && hi < 0 ? `<span class="plabel">${esc(pinLabel(main))}</span>` : ''}</div>`;
+}
+function renderPins(animate = true) {
+  const zoom = map ? map.getZoom() : 15;
+  LOCS.forEach(L => { L.visible = L.items.filter(it => show(it, zoom)); });
+  const vis = [...LOCS.values()].filter(L => L.visible.length)
+    .sort((a, b) => dist(home(), a.ll) - dist(home(), b.ll));
+  const kept = [];  // up to 5 labels, nearest first, skipping any that would collide or be cut off
+  if (map && zoom >= 15) {
+    const {x: w, y: h} = map.getSize();
+    for (const L of vis.filter(x => x.visible.some(i => i.kind !== 'place'))) {
+      const p = map.latLngToContainerPoint(L.ll);  // label only pins in the clear band, never under the bars
+      if (p.x < 64 || p.x > w - 64 || p.y < 225 || p.y > h - 210 || kept.some(k => Math.abs(k.x - p.x) < 110 && Math.abs(k.y - p.y) < 36)) continue;
+      kept.push({key: L.key, x: p.x, y: p.y}); if (kept.length === 5) break;
+    }
+  }
+  LABELS = new Set(kept.map(k => k.key));
+  if (!map) return fallbackPins(vis);
+  markers.forEach(m => map.removeLayer(m)); markers = [];
+  const Lf = window.L; // loop variables below are locations, not the Leaflet namespace
+  vis.forEach((loc, i) => {
+    const isPlace = loc.visible.every(x => x.kind === 'place');
+    const sz = isPlace ? 32 : 42, hit = 48;
+    const html = animate && !REDUCED ? pinHTML(loc, i) : pinHTML(loc, i).replace(/animation-delay:[^;"]+/, 'animation:none');
+    const m = Lf.marker(loc.ll, {icon: Lf.divIcon({className: 'pin-wrap', html, iconSize: [hit, Math.max(sz + 10, hit)], iconAnchor: [hit / 2, sz + 10]}),
+      keyboard: true, title: loc.name, riseOnHover: true, zIndexOffset: isPlace ? 0 : 500});
+    m.on('click', () => openLoc(loc));
+    m.addTo(map); markers.push(m);
+  });
+  if (meMarker) map.removeLayer(meMarker);
+  meMarker = Lf.marker(home(), {icon: window.L.divIcon({className: 'pin-wrap', html: `<div class="me" title="Tu punto de partida (tu colegio o barrio, no tu ubicación)">${icon('home')}</div>`, iconSize: [30, 30], iconAnchor: [15, 15]}), interactive: false, keyboard: false, zIndexOffset: 1000}).addTo(map);
+}
+
+/* offline fallback: the 15 barrios drawn as SVG with pins on top */
+let fb = null;
+function fallbackMap() {
+  const el = $('#map');
+  const all = D.uv.flatMap(u => u.ring);
+  const minY = Math.min(...all.map(p => p[0])), maxY = Math.max(...all.map(p => p[0]));
+  const minX = Math.min(...all.map(p => p[1])), maxX = Math.max(...all.map(p => p[1]));
+  const k = Math.cos(rad((minY + maxY) / 2));
+  const W = 1000, H = W * (maxY - minY) / ((maxX - minX) * k);
+  const P = ll => [(ll[1] - minX) / (maxX - minX) * W, (maxY - ll[0]) / (maxY - minY) * H];
+  fb = {P, W, H};
+  el.innerHTML = `<svg viewBox="-20 -20 ${W + 40} ${H + 40}" style="width:100%;height:100%" preserveAspectRatio="xMidYMid meet">
+    ${D.uv.map(u => `<path d="M${u.ring.map(p => P(p).map(v => v.toFixed(1)).join(' ')).join('L')}Z" fill="var(--surface-2)" stroke="var(--ink)" stroke-width="2"/>`).join('')}
+    <g id="fbPins"></g></svg>`;
+}
+function fallbackPins(vis) {
+  const g = $('#fbPins'); if (!g) return;
+  g.innerHTML = vis.map(L => { const [x, y] = fb.P(L.ll); const c = locCat(L);
+    return `<circle cx="${x}" cy="${y}" r="12" fill="var(--cat-${c})" stroke="var(--ink)" stroke-width="3" data-k="${esc(L.key)}" style="cursor:pointer"/>`; }).join('');
+  $$('circle', g).forEach(c => c.addEventListener('click', () => openLoc(LOCS.get(c.dataset.k))));
+}
+
+/* ============ CHIPS + CAROUSEL ============ */
+const FILTERS = [
+  {id: 'para-ti', label: 'Para ti', icon: 'spark', c: 'var(--sol)'},
+  ...Object.entries(CATS).map(([id, c]) => ({id, label: c.label, icon: c.icon, c: `var(--cat-${id})`})),
+  {id: 'todo', label: 'Todo', icon: 'mapa', c: 'var(--surface-2)'},
+];
+function renderChips() {
+  $('#chips').innerHTML = FILTERS.map(f => `<button class="chip" style="--c:${f.c}" data-f="${f.id}" aria-pressed="${S.filter === f.id}"><span class="dot">${icon(f.icon)}</span>${f.label}</button>`).join('');
+}
+$('#chips').addEventListener('click', e => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  S.filter = b.dataset.f; save(); renderChips(); renderPins(); renderCards(); closeSheet(); ensureVisible();
+});
+function nearby(limit = 10) {
+  const zoom = map ? map.getZoom() : 15;
+  const seen = new Set(), out = [];
+  ITEMS.filter(it => show(it, Math.max(zoom, 16)) && it.kind !== 'place' || (it.kind === 'place' && !it.minor && show(it, 16)))
+    .map(it => ({it, d: dist(home(), it.ll)}))
+    .sort((a, b) => rank(a.it) - rank(b.it) || a.d - b.d)
+    .forEach(({it, d}) => { const k = it.kind === 'act' ? it.a.id : it.id; if (seen.has(k) || out.length >= limit) return; seen.add(k); out.push({it, d}); });
+  return out;
+}
+const TYPE_LABEL = {futbol: 'Fútbol', basquet: 'Básquet', voley: 'Vóley', tenis: 'Tenis', hockey: 'Hockey', patin: 'Patinaje',
+  marciales: 'Artes marciales', escalada: 'Escalada', fuerza: 'Entrenamiento', baile: 'Baile', musica: 'Música',
+  robotica: 'Robótica', estudio: 'Aprender', cine: 'Cine'};
+function cardMeta(it, d) {
+  const ages = it.ages[1] >= 90 ? '' : ` · ${it.ages[0]}–${Math.min(it.ages[1], 29)}${it.ages[1] >= 29 ? '+' : ''} años`;
+  if (it.kind === 'event') return `${new Date(it.e.date + 'T12:00').toLocaleDateString('es-CL', {weekday: 'short', day: 'numeric', month: 'short'})} · ${walkMin(d)} min <span class="tag demo">demo</span>`;
+  if (it.kind === 'place') return `${PLACE[it.type].label} · ${walkMin(d)} min`;
+  return `${TYPE_LABEL[it.type] || ''}${ages} · ${walkMin(d)} min`;
+}
+function rank(it) {  // 0 = matches your interests, 1 = other workshop, 2 = event, 3 = place
+  if (it.kind === 'place') return 3;
+  if (it.kind === 'event') return 2;
+  return interestTypes().includes(it.type) ? 0 : 1;
+}
+const teen = () => S.age != null ? S.age >= 13 : S.mode === 'night';
+function ageTag(ages) { return ages[1] >= 90 ? '' : `<span class="tag age">${ages[0]}–${Math.min(ages[1], 29)}${ages[1] >= 29 ? '+' : ''} años</span>`; }
+function renderCards() {
+  const list = nearby();
+  $('#carTitle').textContent = teen() ? 'Cerca tuyo' : 'Cerca de ti';
+  $('#cards').innerHTML = list.length ? list.map(({it, d}) => `
+    <button class="card" data-id="${esc(it.id)}">
+      <span class="badge" style="--c:var(--cat-${it.cat})">${icon(it.icon)}</span>
+      <span><b>${esc(it.name)}</b><span class="meta">${cardMeta(it, d)}</span></span>
+    </button>`).join('') + wishCard(list.length === 0) : wishCard(true);
+  $('#cards').scrollLeft = 0;
+}
+function wishCard(empty) {
+  const t = teen() ? (empty ? 'Nada para tu edad por acá. ¿Qué falta?' : '¿Qué más te gustaría tener cerca?')
+    : (empty ? 'Aquí todavía no hay nada para tu edad. ¿Qué te gustaría?' : '¿Qué te gustaría que hubiera cerca?');
+  return `<button class="card wish" data-wish><span class="badge" style="--c:var(--cat-ayuda)">${icon('spark')}</span><span><b>${t}</b><span class="meta">Se lo contamos al municipio</span></span></button>`;
+}
+const WISHES = [['musica', 'Música'], ['baile', 'Baile'], ['patin', 'Skate y patines'], ['futbol', 'Fútbol'], ['basquet', 'Básquet'],
+  ['escalada', 'Escalada'], ['robotica', 'Ciencia y robótica'], ['cultura', 'Teatro'], ['cine', 'Cine'], ['estudio', 'Cómics y dibujo'], ['agua', 'Piscina'], ['bici', 'Ciclovía segura']];
+function wish() {
+  closeSheet();
+  openOv(`<div class="ov-body"><div class="ov-top"><button class="iconbtn" data-x aria-label="Cerrar">${icon('x')}</button></div>
+    <h1>${teen() ? '¿Qué falta en tu barrio?' : '¿Qué te gustaría que hubiera cerca?'}</h1>
+    <p class="lead">Elige lo que quieras. Lo sumamos a lo que piden otros de tu barrio y se lo mostramos a la Municipalidad.</p>
+    <div class="falta" role="group" aria-label="Deseos">${WISHES.map(([ic, t]) => `<button data-falta data-w="${ic}" aria-pressed="false">${icon(ic)}${t}</button>`).join('')}</div>
+    <div class="note">${icon('lock')}<span>Solo se cuenta cuántos lo piden en cada barrio. Nadie ve quién lo pidió.</span></div></div>
+    <div class="ov-foot"><button class="btn" data-wish-send>Enviar</button></div>`);
+}
+$('#routeCard').addEventListener('click', e => { if (e.target.closest('[data-route-done]')) clearRoute(); });
+$('#cards').addEventListener('click', e => {
+  if (e.target.closest('[data-wish]')) return wish();
+  const c = e.target.closest('.card[data-id]'); if (!c) return;
+  const it = ITEMS.find(i => i.id === c.dataset.id); if (!it) return;
+  if (map) map.flyTo(it.ll, Math.max(map.getZoom(), 16), {duration: REDUCED ? 0 : .6});
+  openItem(it);
+});
+
+/* ============ SHEET ============ */
+function openSheet(html) {
+  const h = $('#hello'); if (h.classList.contains('on')) { h.classList.remove('on'); h.inert = true; }
+  $('#sheetBody').innerHTML = html; $('#sheetBody').scrollTop = 0;
+  $('#sheet').inert = false; $('#sheet').classList.add('on'); $('#scrim').classList.add('on');
+  setTimeout(() => { const f = $('#sheet button'); f && f.focus({preventScroll: true}); }, 50);
+}
+let sheetFrom = null;  // 'agenda' | 'album' when the sheet was opened from another tab
+const FROM_LABEL = {agenda: 'Agenda', album: 'Álbum'};
+const fromBtn = () => sheetFrom ? `<button class="backpill" data-from aria-label="Volver a ${sheetFrom === 'album' && teen() ? 'Lugares' : FROM_LABEL[sheetFrom]}">${icon('back')}${sheetFrom === 'album' && teen() ? 'Lugares' : FROM_LABEL[sheetFrom]}</button>` : '';
+function openFrom(view, fn) { go('map'); setTimeout(() => { sheetFrom = view; fn(); }, 250); }
+function closeSheet(user) {  // user === true when the kid closed it (X, scrim, drag, Esc)
+  const was = $('#sheet').classList.contains('on');
+  sheetFrom = null;
+  $('#sheet').classList.remove('on'); $('#scrim').classList.remove('on'); $('#sheet').inert = true;
+  if (selKey) { selKey = null; renderPins(false); }
+  if (was && user === true) {
+    ensureVisible();
+    if (!S.onboarded && !$('#ov').classList.contains('on')) hello();  // not signed up yet: back to the welcome card
+  }
+}
+$('#scrim').addEventListener('click', () => closeSheet(true));
+(() => {  // drag the handle down to close; short drags snap back
+  const sh = $('#sheet'), grab = $('#grab'); let y0 = null, dy = 0;
+  grab.addEventListener('pointerdown', e => { y0 = e.clientY; dy = 0; sh.classList.add('dragging'); grab.setPointerCapture(e.pointerId); });
+  grab.addEventListener('pointermove', e => { if (y0 == null) return; dy = Math.max(0, e.clientY - y0); sh.style.transform = `translateY(${dy}px)`; });
+  const end = () => { if (y0 == null) return; y0 = null; sh.classList.remove('dragging'); sh.style.transform = ''; if (dy > 90) closeSheet(true); };
+  grab.addEventListener('pointerup', end); grab.addEventListener('pointercancel', end);
+})();
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if ($('#planner').classList.contains('on')) return $('#planner').classList.remove('on');
+  const o = $('#ov'), back = o.classList.contains('on') && o.querySelector('[data-onb-back]');
+  if (back) return back.click();
+  if (o.classList.contains('on')) return closeOv();
+  closeSheet(true);
+});
+
+function focusMap(L) {
+  selKey = L.key; renderPins(false);
+  if (map) { const p = map.project(L.ll, Math.max(map.getZoom(), 16)); p.y += 180; map.flyTo(map.unproject(p, Math.max(map.getZoom(), 16)), Math.max(map.getZoom(), 16), {duration: REDUCED ? 0 : .5}); }
+}
+function openLoc(L) {
+  focusMap(L);
+  const vis = L.visible && L.visible.length ? L.visible : L.items;
+  if (vis.length === 1) return openItem(vis[0], true);
+  const d = dist(home(), L.ll);
+  openSheet(`
+    <div class="sh-top">${fromBtn()}<span class="spacer"></span><button class="iconbtn" data-close aria-label="Cerrar">${icon('x')}</button></div>
+    <div class="sh-id"><span class="badge" style="--c:var(--cat-${locCat({visible: vis})})">${icon('home')}</span>
+      <div class="meta">${icon('walk')} ${walkMin(d)} min caminando · ${vis.length} cosas aquí</div></div>
+    <h2>${esc(L.name)}</h2>
+    <div class="list">${vis.map(it => `
+      <button class="row" data-open="${esc(it.id)}"><span class="badge" style="--c:var(--cat-${it.cat})">${icon(it.icon)}</span>
+        <span><b>${esc(it.name)}</b><span class="meta">${it.kind === 'place' ? PLACE[it.type].label : ageTag(it.ages)} ${it.kind === 'act' ? '<span class="tag free">Gratis</span>' : ''}</span></span>${icon('chev')}</button>`).join('')}</div>
+    <button class="btn" data-checkin="${esc(L.key)}" style="margin-top:12px">${icon('qr')} Llegué · hacer check-in</button>`);
+}
+function openItem(it, fromMap, pop) {
+  if (!fromMap) focusMap(it.loc);
+  const d = dist(home(), it.ll), wm = walkMin(d);
+  const from = S.homeLabel ? `desde ${esc(S.homeLabel)}` : 'desde el centro de Lo Espejo';
+  const saved = S.saved.includes(it.id), going = S.going.includes(it.id);
+  const back = it.loc.items.length > 1 && !(sheetFrom && !fromMap) ?`<button class="iconbtn" data-back="${esc(it.loc.key)}" aria-label="Volver">${icon('back')}</button>` : '';
+  let facts = '', title = esc(it.name), blurb = '', extra = '', tags = '';
+  if (it.kind === 'act') {
+    const a = it.a, s = it.site;
+    const unit = (a.org || '').replace(/^Municipalidad( de)? Lo\s?Espejo\s*-\s*/i, '').replace(/\bFutbol\b/g, 'Fútbol');
+    tags = `<span class="tag" style="background:var(--cat-${a.cat});color:var(--on-color)">${CATS[a.cat].label}</span> <span class="tag free">Gratis</span> ${ageTag(a.ages)}`;
+    blurb = BLURB[a.type] || '';
+    facts = `
+      ${fact('home', esc(it.loc.name), `${esc(titleCase(s.address))} · ${wm} min caminando ${from}`)}
+      ${fact('clock', s.schedule ? esc(s.schedule) : 'Horario por confirmar', s.schedule ? `Días por confirmar · Pregunta en ${esc(unit || 'la oficina')}` : `Pregunta en ${esc(unit || 'la oficina')}`)}
+      ${safetyLine(s.schedule)}
+      ${fact('check', esc(a.join), a.need ? esc(a.need) : '')}
+      ${fact('users', 'Organiza: ' + esc(unit || a.org), a.sites.length > 1 ? `También en ${a.sites.length - 1} lugar${a.sites.length > 2 ? 'es' : ''} más de la comuna` : '')}`;
+    extra = `<details class="more"><summary>Info para adultos</summary><p style="margin-top:6px">${esc(a.desc)}</p><p>Público: ${esc(a.audience)}</p>${a.link ? `<p><a href="${esc(a.link)}" target="_blank" rel="noopener">Sitio del programa</a></p>` : ''}</details>`;
+  } else if (it.kind === 'event') {
+    const e = it.e, dt = new Date(e.date + 'T12:00');
+    tags = `<span class="tag" style="background:var(--cat-evento);color:var(--on-color)">Evento</span> <span class="tag free">Gratis</span> ${ageTag(e.ages)} <span class="tag demo">demo</span>`;
+    blurb = esc(e.desc || BLURB[e.type] || 'Un panorama en tu comuna.');
+    facts = `${fact('agenda', dt.toLocaleDateString('es-CL', {weekday: 'long', day: 'numeric', month: 'long'}), e.time + ' hrs')}
+      ${fact('home', esc(e.place), `${wm} min caminando ${from}`)}
+      ${safetyLine(e.time)}`;
+  } else {
+    const p = it.p, m = PLACE[p.kind];
+    tags = `<span class="tag" style="background:var(--cat-${m.cat});color:var(--on-color)">${m.label}</span>`;
+    blurb = p.kind === 'cancha' ? 'Una cancha para jugar con tu gente.' : p.kind === 'biblioteca' ? 'Libros, cómics, computadores y talleres.' : 'Un lugar para juntarse, jugar y respirar.';
+    const acts = it.loc.items.filter(x => x.kind === 'act');
+    facts = `${fact('walk', `${wm} min caminando`, from)}${acts.length ? fact('evento', `${acts.length} taller${acts.length > 1 ? 'es' : ''} aquí`, acts.map(x => esc(x.name)).join(', ')) : ''}
+      ${fact('info', 'Fuente: ' + (p.src === 'OSM' ? 'OpenStreetMap' : 'visor CIT-UAI'), '')}`;
+  }
+  const friends = teen() && going ? `<div class="teenline">${icon('users')} 2 personas de tu grupo también van <span class="tag demo">demo</span></div>` : '';
+  openSheet(`
+    <div class="sh-top">${back}${fromBtn()}<span class="spacer"></span><button class="iconbtn" data-close aria-label="Cerrar">${icon('x')}</button></div>
+    <div class="sh-id"><span class="badge" style="--c:var(--cat-${it.cat})">${icon(it.icon)}</span><div class="meta">${tags}</div></div>
+    <h2>${title}</h2>
+    ${blurb ? `<p class="blurb">${blurb}</p>` : ''}
+    ${friends}
+    <div class="facts">${facts}</div>
+    <div class="actions">
+      <button class="act${pop === 'save' ? ' pop' : ''}" data-save="${esc(it.id)}" aria-pressed="${saved}">${icon('save')}${saved ? 'Guardado' : 'Guardar'}</button>
+      <button class="act" data-share="${esc(it.id)}">${icon('share')}${teen() ? 'Invitar' : 'Compartir'}</button>
+      <button class="act" data-route="${esc(it.id)}">${icon('mapa')}Cómo llegar</button>
+    </div>
+    <button class="btn${pop === 'going' ? ' pop' : ''}" data-going="${esc(it.id)}" aria-pressed="${going}">${icon(going ? 'check' : 'walk')} ${going ? '¡Voy!' : 'Quiero ir'}</button>
+    <button class="btn ghost" data-checkin="${esc(it.loc.key)}" style="margin-top:10px">${icon('qr')} ${teen() ? 'Ya estoy aquí · check-in' : '¿Ya llegaste? Gana el sticker'}</button>
+    ${extra}
+    <p class="src">${it.kind === 'act' ? 'Dato real: visor CIT-UAI y Municipalidad de Lo Espejo.' : it.kind === 'event' ? 'Evento de ejemplo para la demo.' : ''}</p>`);
+}
+function endsLate(txt) {  // "16:00 a 19:30 hrs" -> true when it ends at 19:00 or later
+  const m = String(txt || '').match(/(\d{1,2})[:.](\d{2})\s*(?:a|-|–)\s*(\d{1,2})[:.](\d{2})/);
+  return m ? +m[3] >= 19 : /^(19|2\d)[:.]/.test(String(txt || '').trim());
+}
+function safetyLine(txt) {
+  if (!endsLate(txt)) return '';
+  return fact('luna', teen() ? 'Termina cuando oscurece' : 'Termina cuando ya está oscuro',
+    teen() ? 'Mejor volver en grupo o con alguien de tu familia.' : 'Pídele a un adulto que te vaya a buscar.');
+}
+let routeLine = null;
+function showRoute(it) {
+  closeSheet();
+  if (!map) return toast('Para ver el camino hace falta el mapa de calles. Revisa tu internet.');
+  clearRoute();
+  routeLine = window.L.layerGroup([
+    window.L.polyline([home(), it.ll], {color: '#1D1B33', weight: 9, opacity: .9, lineCap: 'round'}),
+    window.L.polyline([home(), it.ll], {color: '#6FA0FF', weight: 5, dashArray: '1 11', lineCap: 'round'}),
+    ...(it.kind ? [] : [window.L.marker(it.ll, {interactive: false, zIndexOffset: 900, icon: window.L.divIcon({className: 'pin-wrap',
+      html: `<div class="pin" style="--c:var(--cat-${it.cat})">${icon(it.icon)}</div>`, iconSize: [48, 52], iconAnchor: [24, 52]})})]),
+  ]).addTo(map);
+  map.fitBounds(window.L.latLngBounds([home(), it.ll]), {paddingTopLeft: [50, 200], paddingBottomRight: [50, 280], maxZoom: 17, animate: !REDUCED});
+  const d = dist(home(), it.ll);
+  $('#routeCard').innerHTML = `<span class="badge" style="--c:var(--cat-${it.cat})">${icon(it.icon)}</span>
+    <span><b>${walkMin(d)} min caminando</b><small>Hasta ${esc(it.loc.name)} · unos ${Math.round(d * 1.3 / 50) * 50} m. La línea es recta: sigue las calles.</small></span>
+    <button class="iconbtn" data-route-done aria-label="Quitar el camino">${icon('x')}</button>`;
+  $('#routeCard').classList.add('on'); $('.carousel').style.visibility = 'hidden';
+}
+function clearRoute() { if (routeLine && map) map.removeLayer(routeLine); routeLine = null; $('#routeCard').classList.remove('on'); $('.carousel').style.visibility = ''; }
+function fact(ic, main, sub) { return `<div class="fact"><span class="fi">${icon(ic)}</span><span>${main}${sub ? `<small>${sub}</small>` : ''}</span></div>`; }
+
+$('#sheet').addEventListener('click', e => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.close != null) return closeSheet(true);
+  if (t.dataset.from != null) { const v = sheetFrom; closeSheet(); return go(v); }
+  if (t.dataset.back) return openLoc(LOCS.get(t.dataset.back));
+  if (t.dataset.open) return openItem(ITEMS.find(i => i.id === t.dataset.open), true);
+  if (t.dataset.save) { toggle(S.saved, t.dataset.save); save(); openItem(ITEMS.find(i => i.id === t.dataset.save), true, 'save'); toast(S.saved.includes(t.dataset.save) ? 'Guardado en tu agenda' : 'Quitado de guardados'); return; }
+  if (t.dataset.going) { toggle(S.going, t.dataset.going); save(); openItem(ITEMS.find(i => i.id === t.dataset.going), true, 'going'); if (S.going.includes(t.dataset.going)) { const g = ITEMS.find(i => i.id === t.dataset.going); const dated = g.kind === 'event';
+    toast(dated ? (teen() ? 'Listo, te avisamos el día antes.' : '¡Bien! Te recordamos el día antes.') : 'Anotado. Te avisamos cuando confirmen los días.'); } return; }
+  if (t.dataset.share) return share(ITEMS.find(i => i.id === t.dataset.share));
+  if (t.dataset.route) return showRoute(ITEMS.find(i => i.id === t.dataset.route));
+  if (t.dataset.checkin) return startCheckin(LOCS.get(t.dataset.checkin));
+});
+const toggle = (arr, v) => { const i = arr.indexOf(v); i < 0 ? arr.push(v) : arr.splice(i, 1); };
+function share(it) {
+  const text = `${it.name} en ${it.loc.name}, Lo Espejo. Lo encontré en Reflejo.`;
+  if (navigator.share) navigator.share({title: 'Reflejo', text}).catch(() => {});
+  else { try { navigator.clipboard.writeText(text); } catch {} toast('Copiado. Pégalo en tu chat.'); }
+}
+let toastT;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2400); }
+
+/* ============ CHECK-IN → STICKER → RATING ============ */
+const ov = $('#ov');
+function openOv(html, cls = '') { ov.className = 'overlay on ' + cls; ov.innerHTML = html; setTimeout(() => { const f = ov.querySelector('button'); f && f.focus(); }, 60); }
+function closeOv() { ov.className = 'overlay'; }
+function startCheckin(L) {
+  closeSheet();
+  const backTo = `<button class="iconbtn" data-ck-back="${esc(L.key)}" aria-label="Volver al lugar">${icon('back')}</button>`;
+  if (S.age != null && S.age < 14 && S.guardian !== 'ok') {
+    return openOv(`<div class="ov-body"><div class="ov-top">${backTo}<span class="spacer" style="flex:1"></span><button class="iconbtn" data-x aria-label="Cerrar">${icon('x')}</button></div>
+      <div class="scan"><span class="badge" style="--c:var(--cat-ayuda);width:88px;height:88px;border-radius:28px">${icon('lock', 'ic" style="width:44px;height:44px')}</span>
+      <h1>Falta que tu adulto apruebe</h1><p class="lead">Mientras tanto puedes mirar el mapa y guardar lo que te guste. Cuando tu adulto diga que sí, podrás hacer check-in y ganar stickers.</p></div></div>
+      <div class="ov-foot"><button class="btn" data-demo-approve>${icon('check')} Simular: mi adulto aprobó (demo)</button><button class="btn ghost" data-x>Volver al mapa</button></div>`);
+  }
+  openOv(`<div class="ov-body" style="background:#15142A;color:#FFF5E6"><div class="ov-top">${backTo}<span style="font-weight:700;flex:1">Check-in en ${esc(L.name)}</span><button class="iconbtn" data-x aria-label="Cerrar">${icon('x')}</button></div>
+    <div class="scan"><div class="viewfinder"><div class="qrsign"><svg viewBox="0 0 24 24" width="90" height="90" fill="none" stroke="#1D1B33" stroke-width="2.2"><use href="#i-qr"/></svg></div><div class="laser"></div></div>
+    <h1 style="font-size:26px">Escanea el cartel Reflejo del lugar</h1><p style="color:#C9C4E8;max-width:300px">Está en la entrada de la plaza, cancha o sede. Así sabemos que viniste de verdad.</p></div></div>
+    <div class="ov-foot" style="background:#15142A"><button class="btn" data-scan="${esc(L.key)}">${icon('qr')} Simular escaneo (demo)</button>
+    <button class="btn ghost" data-tap="${esc(L.key)}" style="background:#23213F;color:#FFF5E6;border-color:#FFF5E6;box-shadow:0 4px 0 #FFF5E6">No hay cartel · Estoy aquí</button></div>`);
+}
+function sticker(L, size = 180, uid = '') {
+  const cat = locCat({visible: L.items.filter(i => ageOk(i)).length ? L.items.filter(i => ageOk(i)) : L.items});
+  const main = L.items.find(i => i.kind !== 'place') || L.items[0];
+  const short = shortName(L.name), name = short.length > 24 ? short.slice(0, 23) + '…' : short;
+  const id = 'c' + (uid || L.key.replace(/[^0-9]/g, ''));
+  return `<svg class="sticker" viewBox="0 0 120 120" width="${size}" height="${size}" role="img" aria-label="Sticker ${esc(L.name)}">
+    <defs><path id="${id}" d="M 22 62 A 38 38 0 0 1 98 62"/></defs>
+    <circle cx="60" cy="60" r="56" fill="#fff" stroke="#1D1B33" stroke-width="3"/>
+    <circle cx="60" cy="60" r="47" fill="var(--cat-${cat})" stroke="#1D1B33" stroke-width="2.5"/>
+    <text font-family="Atkinson Hyperlegible, sans-serif" font-weight="700" font-size="${name.length > 18 ? 8.5 : 10}" fill="#1D1B33"><textPath href="#${id}" startOffset="50%" text-anchor="middle">${esc(name.toUpperCase())}</textPath></text>
+    <use href="#i-${main.icon}" x="40" y="44" width="40" height="40" fill="none" stroke="#1D1B33" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M40 92h40" stroke="#1D1B33" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="2 6"/></svg>`;
+}
+const REWARDS_KID = [
+  {n: 3, t: 'Prioridad para inscribirte en los talleres de verano'},
+  {n: 6, t: 'Entrada doble a un panorama pagado: cine, piscina o un partido'},
+  {n: 12, t: 'Diploma Explorador/a de Lo Espejo de la Municipalidad'},
+];
+const REWARDS_TEEN = [
+  {n: 3, t: 'Prioridad en los talleres de verano'},
+  {n: 6, t: 'Entrada doble a un panorama pagado: cine, piscina o un partido'},
+  {n: 12, t: 'Certificado de participación para tu CV o postulaciones'},
+];
+const rewards = () => teen() ? REWARDS_TEEN : REWARDS_KID;
+function nextReward() { return rewards().find(r => S.stickers.length < r.n) || rewards()[2]; }
+function guardian() {  // what the adult sees when opening the SMS link
+  const ok = S.guardian === 'ok';
+  openOv(`<div class="ov-body"><div class="ov-top"><button class="iconbtn" data-x aria-label="Cerrar">${icon('x')}</button><span class="tag">Vista del adulto</span></div>
+    <h1>Reflejo · Para adultos</h1>
+    <p class="lead">${esc(S.nick || 'Un niño o niña de tu familia')}${S.age ? `, ${S.age} años,` : ''} quiere usar Reflejo, el mapa de talleres gratis de la Municipalidad de Lo Espejo.</p>
+    <div class="box"><h2>${icon('check')} Puede</h2><ul><li>Ver talleres gratis, plazas, canchas y eventos cerca.</li><li>Guardar talleres y marcar "Quiero ir".</li><li>Hacer check-in en un lugar y contar qué le falta.</li></ul></div>
+    <div class="box"><h2>${icon('lock')} No puede</h2><ul><li>Chatear ni recibir mensajes. No hay chat.</li><li>Tener amigos en la app antes de los 13 años.</li><li>Ver publicidad ni comprar nada. No hay.</li></ul></div>
+    <div class="box"><h2>${icon('info')} Qué se guarda</h2><ul><li>Edad, barrio o colegio, gustos, y los lugares donde hizo check-in (se borran a los 90 días).</li><li>Tu celular, solo para este permiso.</li><li>La Municipalidad ve solo totales de 10 o más niños. Nunca su nombre ni su ubicación.</li><li>Tú no ves su ubicación. Ve sus planes solo si tu hijo o hija decide compartirlos.</li></ul></div></div>
+    <div class="ov-foot">${ok ? `<button class="btn danger" data-g-revoke>${icon('trash')} Retirar el permiso y borrar sus datos</button>`
+      : `<button class="btn" data-g-approve>${icon('check')} Sí, apruebo</button><button class="btn ghost" data-g-deny>No apruebo</button>`}</div>`);
+}
+function geoCheck(L) {
+  openOv(`<div class="ov-body"><div class="ov-top"><button class="iconbtn" data-tap-back="${esc(L.key)}" aria-label="Volver a escanear">${icon('back')}</button><span style="flex:1"></span><button class="iconbtn" data-x aria-label="Cerrar">${icon('x')}</button></div>
+    <div class="ov-mid"><span class="badge" style="--c:var(--cat-aprender);width:80px;height:80px;border-radius:24px">${icon('target')}</span>
+    <h1>¿Estás en ${esc(L.name)}?</h1>
+    <p class="lead">Miramos tu ubicación una sola vez para ver si estás a menos de 150 metros. No guardamos dónde estás.</p></div></div>
+    <div class="ov-foot"><button class="btn" data-geo="${esc(L.key)}">${icon('target')} Revisar una vez (demo: estás aquí)</button>
+    <button class="btn ghost" data-noverify="${esc(L.key)}">No quiero compartir mi ubicación</button></div>`);
+}
+function placeBadge(L, isNew = true) {  // 13-17: a clean place card instead of a cartoon sticker
+  const main = L.items.find(i => i.kind !== 'place') || L.items[0];
+  return `<div class="pbadge" style="--c:var(--cat-${main.cat})"><span class="dot">${icon(main.icon)}</span><b>${esc(L.name)}</b><span>${isNew ? '+1 lugar' : 'Ya está en tus lugares'}</span></div>`;
+}
+function reward(L, verified) {
+  if (!verified) {  // counted as a visit, not toward rewards: completion requires being there
+    S.unverified = [...new Set([...(S.unverified || []), L.key])]; save();
+    return openOv(`<div class="ov-body" style="text-align:center;align-items:center"><div class="ov-top" style="align-self:stretch"><button class="iconbtn" data-x aria-label="Cerrar">${icon('x')}</button></div>
+      <div class="reward" style="opacity:.55;filter:grayscale(1)">${teen() ? placeBadge(L) : sticker(L, 190, 'uv')}</div>
+      <h1>Visita anotada</h1><p class="lead">Para que cuente para los premios, escanea el cartel Reflejo la próxima vez que vengas.</p></div>
+      <div class="ov-foot"><button class="btn" data-rate="${esc(L.key)}">${icon('evento')} Cuéntanos cómo está el lugar</button><button class="btn ghost" data-x>Ahora no</button></div>`);
+  }
+  const isNew = !S.stickers.includes(L.key);
+  if (isNew) { S.stickers.push(L.key); S.fresh = (S.fresh || 0) + 1; }
+  save(); renderPins(false); badge();
+  try { navigator.vibrate && navigator.vibrate(20); } catch {}
+  const r = nextReward(), pct = Math.min(100, S.stickers.length / r.n * 100);
+  const burst = REDUCED ? '' : `<div class="burst">${Array.from({length: 16}, (_, i) => {
+    const a = i / 16 * Math.PI * 2, dd = 110 + (i % 3) * 22, c = ['sol', 'cat-arte', 'cat-deporte', 'cat-aprender', 'cat-evento'][i % 5];
+    return `<i class="${['s', 'c', ''][i % 3]}" style="--c:var(--${c});--dx:${Math.cos(a) * dd}px;--dy:${Math.sin(a) * dd}px;--r:${i * 40}deg"></i>`; }).join('')}</div>`;
+  openOv(`<div class="ov-body" style="text-align:center;align-items:center"><div class="ov-top" style="align-self:stretch"><button class="iconbtn" data-x aria-label="Cerrar">${icon('x')}</button></div>
+    <div class="reward">${teen() ? placeBadge(L, isNew) : sticker(L, 190, 'rw')}${burst}</div>
+    <h1>${teen() ? 'Check-in listo' : '¡Llegaste!'}</h1>
+    <p class="lead">${isNew ? (teen() ? `Sumaste <b>${esc(L.name)}</b> a tus lugares.` : `Ganaste el sticker de <b>${esc(L.name)}</b>.`) : (teen() ? 'Ya tenías este lugar. Bien que volviste.' : 'Ya tenías este sticker. ¡Qué bueno que volviste!')}</p>
+    <div style="width:100%;text-align:left" class="rw"><div class="top"><span>${esc(r.t)}</span><span>${Math.min(S.stickers.length, r.n)}/${r.n}</span></div><div class="progress"><i style="width:0" data-w="${pct}"></i></div></div></div>
+    <div class="ov-foot"><button class="btn" data-rate="${esc(L.key)}">${icon('evento')} Cuéntanos cómo está el lugar</button><button class="btn ghost" data-x>Ahora no</button></div>`);
+  requestAnimationFrame(() => setTimeout(() => { const b = ov.querySelector('.progress i'); if (b) b.style.width = b.dataset.w + '%'; }, 120));
+}
+const FALTA = [['sol', 'Sombra'], ['luz', 'Luz de noche'], ['wc', 'Baños'], ['agua', 'Agua para tomar'], ['juegos', 'Juegos para mi edad'], ['trash', 'Basureros'], ['evento', 'Algo que hacer']];
+function rate(L) {
+  const canWrite = S.age != null && S.age >= 14;  // free text only for 14+, moderated
+  openOv(`<div class="ov-body"><div class="ov-top"><button class="iconbtn" data-x aria-label="Cerrar">${icon('x')}</button><span style="font-weight:700">${esc(L.name)}</span></div>
+    <h1>¿Cómo estaba el lugar?</h1>
+    ${teen() ? `<div class="scale" role="group" aria-label="Nota del 1 al 5">${[1, 2, 3, 4, 5].map(n => `<button data-face="${n}" aria-pressed="false">${n}</button>`).join('')}</div><div class="scale-l"><span>Mal</span><span>Excelente</span></div>` : ''}
+    <div class="faces" role="group" aria-label="Cómo estaba" ${teen() ? 'hidden' : ''}>${[['Mal', 'M14 30c4-4 16-4 20 0'], ['Más o menos', 'M14 29h20'], ['Bien', 'M14 27c4 5 16 5 20 0']].map(([t, d], i) =>
+      `<button class="face" data-face="${i}" aria-pressed="false"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="24" cy="24" r="20"/><circle cx="17" cy="19" r="1.5" fill="currentColor"/><circle cx="31" cy="19" r="1.5" fill="currentColor"/><path d="${d}"/></svg>${t}</button>`).join('')}</div>
+    <h3 class="sec">¿Te sentiste seguro/a?</h3>
+    <div class="falta" role="group" aria-label="Seguridad">${['Sí', 'Más o menos', 'No'].map(t => `<button data-safe aria-pressed="false">${icon('escudo')}${t}</button>`).join('')}</div>
+    <h3 class="sec">¿Qué le falta?</h3>
+    <div class="falta" role="group" aria-label="Qué falta">${FALTA.map(([ic, t]) => `<button data-falta aria-pressed="false">${icon(ic)}${t}</button>`).join('')}</div>
+    ${canWrite ? `<h3 class="sec">¿Algo más? <small style="font-weight:400;color:var(--ink-soft)">(opcional)</small></h3><textarea class="note-in" maxlength="140" placeholder="Ej: la luz de la cancha no funciona"></textarea><p class="src">Lo revisa un moderador. No escribas nombres ni teléfonos.</p>` : ''}
+    <div class="note">${icon('lock')}<span>Tu respuesta se junta con la de otros niños y niñas. El municipio solo ve el total cuando 10 o más cuentan algo del mismo lugar. Nadie ve tu nombre.</span></div></div>
+    <div class="ov-foot"><button class="btn" data-send="${esc(L.key)}">Enviar</button></div>`);
+}
+function thanks(L) {
+  S.ratings++; save();
+  const n = 20 + (L.key.length * 7) % 40;
+  openOv(`<div class="ov-body" style="text-align:center;align-items:center"><div class="ov-top" style="align-self:stretch"><button class="iconbtn" data-x aria-label="Cerrar">${icon('x')}</button></div><div class="ov-mid">
+    ${teen() ? '' : '<svg class="chinco" viewBox="0 0 120 120" style="width:120px;height:120px" aria-hidden="true"><use href="#chinco"/></svg>'}
+    <h1>${teen() ? 'Gracias' : '¡Gracias!'}</h1><p class="lead">Ya van <b>${n + 1}</b> respuestas sobre ${esc(L.name)} <span class="tag demo">demo</span>. Con esto la Municipalidad decide qué arreglar primero.</p></div></div>
+    <div class="ov-foot"><button class="btn" data-x>Volver al mapa</button></div>`);
+}
+ov.addEventListener('click', e => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.x != null) return closeOv();
+  if (t.dataset.demoApprove != null) { S.guardian = 'ok'; save(); toast('Tu adulto aprobó tu cuenta'); return closeOv(); }
+  if (t.dataset.gApprove != null) { S.guardian = 'ok'; save(); closeOv(); return toast('Permiso aprobado. Ya puede hacer check-in.'); }
+  if (t.dataset.gDeny != null) { closeOv(); return toast('No aprobado. Puede mirar el mapa, pero sin check-in.'); }
+  if (t.dataset.gRevoke != null) { S.guardian = 'none'; S.stickers = []; S.unverified = []; S.going = []; S.saved = []; save(); closeOv(); renderPins(false); return toast('Permiso retirado. Borramos sus lugares y planes.'); }
+  if (t.dataset.ckBack) { closeOv(); return openLoc(LOCS.get(t.dataset.ckBack)); }
+  if (t.dataset.tapBack) return startCheckin(LOCS.get(t.dataset.tapBack));
+  if (t.dataset.scan) return reward(LOCS.get(t.dataset.scan), true);
+  if (t.dataset.tap) return geoCheck(LOCS.get(t.dataset.tap));
+  if (t.dataset.geo) return reward(LOCS.get(t.dataset.geo), true);
+  if (t.dataset.noverify) return reward(LOCS.get(t.dataset.noverify), false);
+  if (t.dataset.rate) return rate(LOCS.get(t.dataset.rate));
+  if (t.dataset.face != null) { $$('[data-face]', ov).forEach(b => b.setAttribute('aria-pressed', b === t)); return; }
+  if (t.dataset.safe != null) { $$('[data-safe]', ov).forEach(b => b.setAttribute('aria-pressed', b === t)); return; }
+  if (t.dataset.falta != null) { t.setAttribute('aria-pressed', t.getAttribute('aria-pressed') !== 'true'); return; }
+  if (t.dataset.send) {
+    if (!ov.querySelector('[data-face][aria-pressed="true"]')) { toast(teen() ? 'Elige una nota del 1 al 5 primero' : 'Elige una carita primero'); ov.querySelector('[data-face]:not([hidden] *)')?.focus(); return; }
+    return thanks(LOCS.get(t.dataset.send));
+  }
+  if (t.dataset.wishSend != null) {
+    const w = $$('[data-w][aria-pressed="true"]', ov).map(b => b.dataset.w);
+    if (!w.length) return toast('Elige al menos una cosa');
+    S.wishes = [...new Set([...(S.wishes || []), ...w])]; save(); closeOv();
+    return toast(teen() ? 'Anotado. Se suma a lo que pide tu barrio.' : '¡Anotado! Se suma a lo que piden otros niños y niñas.');
+  }
+  if (onbHandler(t)) return;
+});
+
+/* ============ ONBOARDING ============ */
+let step = 0, pick = {};
+function hello() {
+  const n = D.activities.length, parks = D.places.filter(p => p.kind === 'parque' || p.kind === 'juegos').length;
+  const canchas = D.places.filter(p => p.kind === 'cancha').length;
+  const near = [...LOCS.values()].filter(L => L.items.some(i => i.kind === 'act'))
+    .map(L => ({L, d: dist(CENTER, L.ll)})).sort((a, b) => a.d - b.d).slice(0, 3);
+  HILITE = near.map(x => x.L.key); renderPins(false);
+  if (map) map.fitBounds(window.L.latLngBounds([CENTER, ...near.map(x => x.L.ll)]), {paddingTopLeft: [40, 170], paddingBottomRight: [40, 380], maxZoom: 16});
+  const label = L => { const a = L.items.find(i => i.kind === 'act'); const n = a.name.replace(/^Taller(es)? (de )?/i, ''); return n[0].toUpperCase() + n.slice(1); };
+  $('#hello').innerHTML = `<div class="top"><svg class="chinco" viewBox="0 0 120 120" aria-hidden="true"><use href="#chinco"/></svg><h1>Lo que pasa en Lo Espejo, cerca tuyo</h1></div>
+    <p>Talleres gratis, plazas y canchas. Estos 3 brillan en el mapa:</p>
+    <div class="near">${near.map((x, i) => `<button class="nrow" data-near="${esc(x.L.key)}"><span class="n">${i + 1}</span><span class="nt"><b>${esc(label(x.L))}</b><small>${icon('walk')} ${walkMin(x.d)} min desde el centro de la comuna</small></span>${icon('chev')}</button>`).join('')}</div>
+    <div class="stats"><span class="tag free">${n} talleres gratis</span><span class="tag" style="background:var(--cat-aire)">${parks} plazas y juegos</span><span class="tag" style="background:var(--cat-deporte)">${canchas} canchas</span></div>
+    <button class="btn" id="goBtn">¡Vamos!</button>`;
+  $('#hello').classList.add('on'); $('#hello').inert = false;
+  $('#goBtn').addEventListener('click', () => { $('#hello').classList.remove('on'); $('#hello').inert = true; HILITE = []; step = 1; pick = {age: S.age, interests: [...S.interests]}; onb(); });
+}
+$('#hello').addEventListener('click', e => { const b = e.target.closest('[data-near]'); if (b) openLoc(LOCS.get(b.dataset.near)); });
+function stepsBar(total, cur) { return `<div class="steps" aria-label="Paso ${cur} de ${total}">${Array.from({length: total}, (_, i) => `<i class="${i < cur ? 'on' : ''}"></i>`).join('')}</div>`; }
+function onb() {
+  const total = pick.edit ? 3 : 4;
+  const top = `<div class="ov-top"><button class="iconbtn" data-onb-back aria-label="Atrás">${icon('back')}</button>${stepsBar(total, step)}</div>`;
+  if (step === 1) openOv(`<div class="ov-body">${top}<h1>¿Cuántos años tienes?</h1><p class="lead">Así te mostramos lo que es para tu edad.</p>
+    <div class="agegrid" role="group" aria-label="Edad">${Array.from({length: 10}, (_, i) => i + 8).map(a => `<button data-age="${a}" aria-pressed="${pick.age === a}">${a}</button>`).join('')}</div>
+    <div class="note">${icon('lock')}<span>Solo tu edad. No pedimos tu nombre, tu RUT ni tu dirección.</span></div></div>
+    <div class="ov-foot"><button class="btn" data-onb-next ${pick.age ? '' : 'disabled'}>Seguir</button></div>`);
+  if (step === 2) openOv(`<div class="ov-body">${top}<h1>¿Dónde pasas más tiempo?</h1><p class="lead">Lo usamos para mostrarte lo que está cerca. No necesitamos tu ubicación.</p>
+    <div class="tabs" role="tablist"><button role="tab" data-tab="cole" aria-selected="${pick.tab !== 'barrio'}">Mi colegio</button><button role="tab" data-tab="barrio" aria-selected="${pick.tab === 'barrio'}">Mi barrio</button></div>
+    <div id="placePick">${pick.tab === 'barrio' ? barrioPicker() : colePicker()}</div></div>
+    <div class="ov-foot"><button class="btn" data-onb-next ${pick.home ? '' : 'disabled'}>Seguir</button></div>`);
+  if (step === 3) openOv(`<div class="ov-body">${top}<h1>${pick.age >= 13 ? '¿Qué te mueve?' : '¿Qué te gusta?'}</h1><p class="lead">Elige hasta 3. Puedes cambiarlo después.</p>
+    <div class="gustos" role="group" aria-label="Gustos">${INTERESTS.map(g => `<button class="gusto" style="--c:var(--cat-${g.cat})" data-gusto="${g.id}" aria-pressed="${pick.interests.includes(g.id)}">${icon(g.icon)}${g.label}</button>`).join('')}</div></div>
+    <div class="ov-foot">${pick.edit ? `<button class="btn" data-onb-save>${icon('check')} Guardar cambios</button>` : `<button class="btn" data-onb-next>${pick.interests.length ? 'Seguir' : 'Saltar'}</button>`}</div>`);
+  if (step === 4) {
+    if (pick.age < 14) openOv(`<div class="ov-body">${top}<h1>${pick.age >= 13 ? 'Falta el OK de un adulto' : 'Pídele a un adulto que te acompañe'}</h1>
+      <p class="lead">${pick.age >= 13 ? 'Por ley, hasta los 13 años un adulto tiene que aprobar tu cuenta. Tú sigues mirando mientras responde.' : `Como tienes ${pick.age} años, un adulto de tu familia tiene que decir que sí.`}</p>
+      <div class="sms"><small>Tu adulto recibirá:</small>Municipalidad de Lo Espejo: un niño o niña de tu familia quiere usar Reflejo, el mapa de talleres gratis. Guarda su edad, barrio, gustos y los lugares donde hace check-in (se borran a los 90 días). No pide nombre, RUT ni dirección. Responde SÍ para aprobar o NO para rechazar. Puedes retirar el permiso cuando quieras respondiendo BORRAR. Aviso completo en la web de la Municipalidad.</div>
+      <label for="gPhone" style="font-weight:700">Celular de tu adulto</label>
+      <div class="phone-in"><span class="pre">+56 9</span><input id="gPhone" inputmode="numeric" autocomplete="off" maxlength="9" placeholder="1234 5678" value="${esc(pick.phone || '')}"></div>
+      <div class="err" id="gErr" aria-live="polite"></div>
+      <div class="note">${icon('info')}<span>Mientras tu adulto responde, ya puedes mirar el mapa y guardar talleres. El check-in se activa cuando diga que sí.</span></div></div>
+      <div class="ov-foot"><button class="btn" data-guardian>Enviar mensaje a mi adulto</button><button class="btn ghost" data-onb-skip>Lo hago después</button></div>`);
+    else openOv(`<div class="ov-body">${top}<h1>Tu cuenta, tus reglas</h1><p class="lead">Antes de seguir, esto es lo que hace Reflejo con tus datos:</p>
+      <div class="box"><ul><li>Guarda tu edad, tu barrio o colegio y tus gustos. Nada más.</li><li>Tus check-ins y opiniones se suman de forma anónima para mejorar plazas y talleres.</li><li>No usamos tu ubicación salvo que la actives, y ves cuando está activa.</li><li>Puedes borrar todo cuando quieras desde "Yo".</li></ul></div></div>
+      <div class="ov-foot"><button class="btn" data-consent>Acepto y sigo</button><button class="btn ghost" data-onb-skip>Solo quiero mirar el mapa</button></div>`);
+  }
+}
+function colePicker(q = '') {
+  const list = D.schools.filter(s => !q || s.name.toLowerCase().includes(q.toLowerCase())).slice(0, 40);
+  return `<input class="search" id="coleQ" type="search" placeholder="Escribe el nombre de tu colegio" value="${esc(q)}" aria-label="Buscar colegio">
+    <div class="opts">${list.map(s => `<button class="opt" data-cole="${s.id}" aria-pressed="${pick.home && pick.homeId === s.id}">${esc(s.name)}</button>`).join('') || '<p class="src">No lo encontramos. Prueba "Mi barrio".</p>'}</div>`;
+}
+function barrioPicker() {
+  const all = D.uv.flatMap(u => u.ring);
+  const minY = Math.min(...all.map(p => p[0])), maxY = Math.max(...all.map(p => p[0]));
+  const minX = Math.min(...all.map(p => p[1])), maxX = Math.max(...all.map(p => p[1]));
+  const k = Math.cos(rad((minY + maxY) / 2)), W = 330, H = W * (maxY - minY) / ((maxX - minX) * k);
+  const P = ll => [(ll[1] - minX) / (maxX - minX) * W, (maxY - ll[0]) / (maxY - minY) * H];
+  return `<p class="src" style="margin:0 0 8px">Toca tu barrio en el mapa de la comuna.</p>
+    <svg class="uvmap" viewBox="-6 -6 ${W + 12} ${H + 12}" role="group" aria-label="Barrios de Lo Espejo">${D.uv.map(u => { const c = P(centroid(u.ring));
+      return `<path tabindex="0" role="button" aria-label="Unidad vecinal ${u.uv}" data-uv="${u.uv}" class="${pick.homeId === 'uv' + u.uv ? 'sel' : ''}" d="M${u.ring.map(p => P(p).map(v => v.toFixed(1)).join(' ')).join('L')}Z"/><text x="${c[0].toFixed(0)}" y="${c[1].toFixed(0)}" text-anchor="middle">${u.uv}</text>`; }).join('')}</svg>`;
+}
+function onbHandler(t) {
+  if (t.dataset.onbBack != null) {
+    if (step > 1) { step--; onb(); return true; }
+    closeOv();
+    if (pick.edit) setMode(S.age != null ? (S.age >= 13 ? 'night' : 'day') : S.mode);  // cancelled: undo the age preview
+    else hello();
+    return true;
+  }
+  if (t.dataset.onbSave != null) {
+    Object.assign(S, {age: pick.age, home: pick.home, homeLabel: pick.homeLabel, interests: pick.interests}); save();
+    closeOv(); refresh(); renderYo(); toast('Listo, guardamos tus cambios'); return true;
+  }
+  if (t.dataset.age) { pick.age = +t.dataset.age; setMode(pick.age >= 13 ? 'night' : 'day'); onb(); return true; }
+  if (t.dataset.tab) { pick.tab = t.dataset.tab; onb(); return true; }
+  if (t.dataset.cole) { const s = D.schools.find(x => x.id === t.dataset.cole); pick.home = s.ll; pick.homeId = s.id; pick.homeLabel = s.name.replace(/^(Escuela|Colegio|Liceo)\s+(B[aá]sica\s+)?/i, ''); onb(); return true; }
+  if (t.dataset.gusto) { const g = t.dataset.gusto, i = pick.interests.indexOf(g); if (i >= 0) pick.interests.splice(i, 1); else if (pick.interests.length < 3) pick.interests.push(g); else toast('Máximo 3. Quita uno para elegir otro.'); onb(); return true; }
+  if (t.dataset.onbNext != null) { step++; onb(); return true; }
+  if (t.dataset.guardian != null) {
+    const v = ($('#gPhone').value || '').replace(/\D/g, '');
+    pick.phone = v;
+    if (v.length !== 8) { const f = 8 - v.length; $('#gErr').innerHTML = icon('info') + (f === 1 ? 'Falta 1 número' : f > 1 ? `Faltan ${f} números` : 'Sobran números'); $('#gPhone').focus(); return true; }
+    S.guardian = 'pending'; finish(); toast('Le mandamos un mensaje a tu adulto'); return true;
+  }
+  if (t.dataset.consent != null) { S.consent = true; finish(); return true; }
+  if (t.dataset.onbSkip != null) { finish(); return true; }
+  return false;
+}
+ov.addEventListener('input', e => {
+  if (e.target.id === 'coleQ') { const q = e.target.value; $('#placePick').innerHTML = colePicker(q); const i = $('#coleQ'); i.focus(); i.setSelectionRange(q.length, q.length); }
+  if (e.target.id === 'gPhone') { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 8); $('#gErr').textContent = ''; }
+});
+ov.addEventListener('click', e => {
+  const p = e.target.closest('path[data-uv]'); if (!p) return;
+  const u = D.uv.find(x => x.uv === p.dataset.uv); pick.home = centroid(u.ring); pick.homeId = 'uv' + u.uv; pick.homeLabel = 'tu barrio'; onb();
+});
+ov.addEventListener('keydown', e => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('path[data-uv]')) {
+    e.preventDefault(); const uv = e.target.dataset.uv; e.target.dispatchEvent(new MouseEvent('click', {bubbles: true}));
+    const n = $(`path[data-uv="${uv}"]`, ov); n && n.focus();
+  }
+});
+function finish() {
+  Object.assign(S, {onboarded: true, age: pick.age, home: pick.home, homeLabel: pick.homeLabel, interests: pick.interests,
+    nick: S.nick || `${BIRDS[Math.floor(Math.random() * BIRDS.length)]} ${ADJ[Math.floor(Math.random() * ADJ.length)]} ${10 + Math.floor(Math.random() * 90)}`,
+    filter: 'para-ti'});
+  save(); closeOv(); refresh();
+  fitNearby();
+  tipOnce(S.mode === 'night' ? '' : '¡Toca un círculo para ver qué hay! Los que tienen número tienen varias cosas.');
+}
+
+/* ============ AGENDA ============ */
+function renderAgenda() {
+  const evs = D.events.map(e => ITEMS.find(i => i.id === e.id)).filter(ageOk).sort((a, b) => a.e.date.localeCompare(b.e.date));
+  const withTime = ITEMS.filter(i => i.kind === 'act' && i.site.schedule && ageOk(i));
+  const mine = ITEMS.filter(i => S.going.includes(i.id) || S.saved.includes(i.id));
+  const evCard = it => { const dt = new Date(it.e.date + 'T12:00');
+    return `<button class="ev" data-open="${esc(it.id)}"><span class="date" style="--c:var(--cat-evento)"><span><b>${dt.getDate()}</b><span>${dt.toLocaleDateString('es-CL', {month: 'short'}).replace('.', '')}</span></span></span>
+      <span><b>${esc(it.name)}</b><span class="meta">${icon('clock')} ${it.e.time} · ${esc(it.e.place)} <span class="tag demo">demo</span></span></span></button>`; };
+  const rowCard = it => `<button class="row" data-open="${esc(it.id)}"><span class="badge" style="--c:var(--cat-${it.cat})">${icon(it.icon)}</span><span><b>${esc(it.name)}</b><span class="meta">${it.kind === 'act' && it.site.schedule ? `<span style="white-space:nowrap">${icon('clock')} ${esc(it.site.schedule)}</span>` : ''}<span>${esc(it.loc.name)}</span></span></span>${icon('chev')}</button>`;
+  $('#agenda').innerHTML = `<div class="pagehead"><h1>Agenda</h1><p>Lo que viene en Lo Espejo.</p></div>
+    <div class="day">Tus planes</div>${mine.length ? `<div class="list">${mine.map(rowCard).join('')}</div>` : `<div class="note">${icon('save')}<span>Todavía no tienes planes. Toca <b>Guardar</b> o <b>Quiero ir</b> en un taller y aparecerá aquí.</span></div>`}
+    <div class="day">Próximos eventos</div>${evs.map(evCard).join('')}
+    <div class="day">Talleres con horario</div><div class="list">${withTime.map(rowCard).join('')}</div>
+    <div class="note">${icon('info')}<span>La mayoría de los talleres todavía no publica su horario. Por ahora, pregunta en la oficina que lo organiza.</span></div>`;
+}
+$('#agenda').addEventListener('click', e => { const b = e.target.closest('[data-open]'); if (b) openFrom('agenda', () => openItem(ITEMS.find(i => i.id === b.dataset.open))); });
+
+/* ============ ALBUM ============ */
+function albumLocs() {
+  const seen = new Set();  // two spots near the same landmark share its name: keep one (the collected one)
+  return [...LOCS.values()].filter(L => L.items.some(i => i.kind === 'act' || (i.kind === 'place' && i.p.named && i.p.kind !== 'cancha')))
+    .sort((a, b) => (S.stickers.includes(b.key) - S.stickers.includes(a.key)) || dist(home(), a.ll) - dist(home(), b.ll))
+    .filter(L => !seen.has(L.name) && seen.add(L.name));
+}
+function badge() {  // "+1" on the Álbum / Lugares tab until the kid looks at it
+  const b = $('.nav [data-view="album"]'); let el = b.querySelector('.newb');
+  if (!S.fresh) { el && el.remove(); return; }
+  if (!el) { el = document.createElement('span'); el.className = 'newb'; b.appendChild(el); }
+  el.textContent = `+${S.fresh}`;
+}
+function renderAlbum() {
+  S.fresh = 0; save(); badge();
+  const locs = albumLocs(), got = S.stickers.length, T = teen();
+  $('#album').innerHTML = `<div class="pagehead"><h1>${T ? 'Tus lugares' : 'Tu álbum'}</h1><p>${T ? `${got} de ${locs.length} lugares de Lo Espejo con check-in.` : `${got} de ${locs.length} lugares para coleccionar. Cada sticker se gana yendo al lugar.`}</p></div>
+    <div class="news">${icon('spark')}<span><b>Gracias a 214 reportes, la Plaza Buenaventura tendrá luces nuevas.</b> <span class="tag demo">demo</span></span></div>
+    <h3 class="sec">${T ? 'Lugares' : 'Stickers'}</h3>
+    ${T ? `<div class="pgrid">${locs.slice(0, 12).map(L => { const m = L.items.find(i => i.kind !== 'place') || L.items[0];
+      return `<button class="pcard ${S.stickers.includes(L.key) ? '' : 'off'}" data-loc="${esc(L.key)}" style="--c:var(--cat-${m.cat})"><span class="dot">${icon(S.stickers.includes(L.key) ? 'check' : m.icon)}</span><span>${esc(L.name)}</span></button>`; }).join('')}</div>`
+    : `<div class="stickers">${locs.slice(0, 12).map((L, i) => `<button class="stk ${S.stickers.includes(L.key) ? '' : 'off'}" data-loc="${esc(L.key)}">${sticker(L, 96, 'a' + i)}<span>${esc(L.name.length > 28 ? L.name.slice(0, 27) + '…' : L.name)}</span></button>`).join('')}</div>`}
+    <h3 class="sec">Premios de verdad</h3>
+    <div class="rewards">${rewards().map(r => `<div class="rw ${got >= r.n ? 'got' : ''}"><div class="top"><span>${esc(r.t)}</span><span>${Math.min(got, r.n)}/${r.n}</span></div><div class="progress"><i style="width:${Math.min(100, got / r.n * 100)}%"></i></div></div>`).join('')}</div>
+    <p class="src">Premios propuestos, a definir con la Municipalidad.</p>`;
+}
+
+$('#album').addEventListener('click', e => {
+  const b = e.target.closest('[data-loc]'); if (!b) return;
+  if (!S.stickers.includes(b.dataset.loc)) toast(teen() ? 'Ve al lugar y haz check-in para sumarlo' : 'Ve a este lugar y haz check-in para ganar el sticker');
+  openFrom('album', () => openLoc(LOCS.get(b.dataset.loc)));
+});
+
+/* ============ YO ============ */
+function renderYo() {
+  const band = S.age == null ? 'Sin definir' : S.age < 13 ? '8–12 · Día' : '13–17 · Noche';
+  const g = S.age != null && S.age < 14 ? (S.guardian === 'ok' ? 'Aprobado por tu adulto' : S.guardian === 'pending' ? 'Esperando a tu adulto' : 'Falta pedirlo') : 'No hace falta (14+)';
+  const initials = (S.nick || 'V').split(' ').slice(0, 2).map(w => w[0]).join('');
+  $('#yo').innerHTML = `<div class="pagehead" style="display:flex;gap:14px;align-items:center"><span class="avatar">${teen() ? `<span class="initials">${esc(initials)}</span>` : '<svg viewBox="0 0 120 120" width="60" height="60" aria-hidden="true"><use href="#chinco"/></svg>'}</span>
+    <div><h1 style="font-size:28px">${esc(S.nick || 'Visitante')}</h1><p style="margin:2px 0 0">Tu apodo. Nadie ve tu nombre real.</p></div></div>
+    <div class="box"><div class="kv"><span>Edad</span><b>${S.age ?? '—'}</b></div><div class="kv"><span>Modo</span><b>${band}</b></div>
+      <div class="kv"><span>Cerca de</span><b>${esc(S.homeLabel || 'Centro de Lo Espejo')}</b></div><div class="kv"><span>${teen() ? 'Lugares' : 'Stickers'}</span><b>${S.stickers.length}</b></div>
+      <div class="kv"><span>Permiso de adulto</span><b>${g}</b></div></div>
+    ${S.age != null && S.age < 14 ? `<button class="btn ghost" data-yo="guardian" style="margin-bottom:12px">${icon('users')} Ver lo que ve tu adulto</button>` : ''}
+    <div class="box"><h2>${icon('lock')} Tus datos</h2><ul>
+      <li><b>Guardamos:</b> tu edad, tu barrio o colegio, tus gustos, los lugares donde hiciste check-in, lo que marcaste con "Quiero ir" o "Guardar", y tus respuestas y deseos.</li>
+      ${S.age != null && S.age < 14 ? '<li><b>De tu adulto:</b> solo su celular, para el permiso.</li>' : ''}
+      <li><b>Cuánto tiempo:</b> tus check-ins se borran a los 90 días. Los totales anónimos quedan.</li>
+      <li><b>El municipio ve:</b> solo totales, como "40 niñas y niños fueron a esta plaza este mes". Nunca tu nombre ni tu lista de lugares.</li>
+      <li><b>Ubicación:</b> apagada. Si la activas, verás un aviso azul arriba.</li>
+      <li><b>Nunca te pedimos:</b> nombre real, RUT, dirección ni fecha de nacimiento.</li></ul></div>
+    ${teen() ? `<div class="box"><h2>${icon('users')} Tu grupo</h2>
+      <p class="src" style="margin:0 0 6px">Solo se agrega en persona, escaneando el código del otro. No hay buscador ni chat, y nadie fuera de tu grupo ve a dónde vas.</p>
+      <div class="friend"><span class="av">${icon('yo')}</span><span><b>Tordo Audaz 12</b><br><small>Va a: Taller de Batucada</small></span> <span class="tag demo">demo</span></div>
+      <div class="friend"><span class="av" style="background:var(--cat-aprender)">${icon('yo')}</span><span><b>Diuca Estelar 71</b><br><small>Va a: Programa Barrio</small></span></div>
+      <button class="switch" data-yo="share" aria-pressed="${!!S.shareGroup}">Mi grupo ve a dónde voy<i aria-hidden="true"></i></button>
+      <button class="btn ghost" data-yo="qr" style="margin-top:6px">${icon('qr')} Mostrar mi código</button></div>`
+    : `<div class="box"><h2>${icon('users')} Amigos</h2><p class="src" style="margin:0">Los grupos de amigos se activan a los 13 años. Mientras, puedes compartir talleres con quien quieras.</p></div>`}
+    <button class="btn" data-yo="edit" style="margin-bottom:12px">Cambiar edad, barrio o gustos</button>
+    <button class="btn danger" data-yo="delete">${icon('trash')} Borrar mis datos</button>
+    <div class="box" style="margin-top:16px"><h2>Controles de la demo</h2><div class="row" style="display:flex;flex-wrap:wrap;gap:8px;border:0;padding:0;min-height:0">
+      <button class="pbtn" data-demo-mode="day">8–12 · Día</button><button class="pbtn" data-demo-mode="night">13–17 · Noche</button><button class="pbtn" data-demo="planner">Vista municipio</button></div></div>`;
+}
+$('#yo').addEventListener('click', e => {
+  const b = e.target.closest('[data-yo]'); if (!b) return;
+  if (b.dataset.yo === 'guardian') return guardian();
+  if (b.dataset.yo === 'share') { S.shareGroup = !S.shareGroup; save(); b.setAttribute('aria-pressed', S.shareGroup); return toast(S.shareGroup ? 'Tu grupo verá a qué talleres vas' : 'Nadie ve a dónde vas'); }
+  if (b.dataset.yo === 'qr') {
+    return openOv(`<div class="ov-body" style="text-align:center"><div class="ov-top" style="align-self:stretch"><button class="iconbtn" data-x aria-label="Cerrar">${icon('x')}</button></div><div class="ov-mid"><h1>Tu código</h1><p class="lead">Muéstraselo a tu amigo o amiga para que te agregue. Cambia cada 5 minutos, así nadie lo puede copiar de una foto.</p>
+      <div class="qrme"><svg viewBox="0 0 24 24" width="110" height="110" fill="none" stroke="#1D1B33" stroke-width="2"><use href="#i-qr"/></svg></div><p class="src">${esc(S.nick || '')}</p></div></div>
+      <div class="ov-foot"><button class="btn" data-x>Listo</button></div>`);
+  }
+  if (b.dataset.yo === 'edit') { step = 1; pick = {age: S.age, interests: [...S.interests], home: S.home, homeLabel: S.homeLabel, edit: true}; onb(); }
+  if (b.dataset.yo === 'delete') {
+    openOv(`<div class="ov-body"><div class="ov-top" style="align-self:stretch"><button class="iconbtn" data-x aria-label="Cerrar">${icon('x')}</button></div><div class="ov-mid"><h1>¿Borrar todo?</h1><p class="lead">Se borran tu edad, barrio, gustos, stickers y el permiso de tu adulto. Lo que ya se sumó a los totales anónimos no se puede separar, porque no tiene tu nombre.</p></div></div>
+      <div class="ov-foot"><button class="btn danger" data-wipe>${icon('trash')} Sí, borrar todo</button><button class="btn ghost" data-x>No, volver</button></div>`);
+  }
+});
+ov.addEventListener('click', e => { if (e.target.closest('[data-wipe]')) { try { localStorage.removeItem(KEY); } catch {} S = {...FRESH}; closeOv(); setMode('day'); go('map'); refresh(); hello(); toast('Listo, borramos tus datos.'); } });
+
+/* ============ AYUDA ============ */
+let HELP_MAP = [];
+ov.addEventListener('click', e => {
+  const b = e.target.closest('[data-help-map]'); if (!b) return;
+  const h = HELP_MAP[+b.dataset.helpMap]; if (!h) return;
+  closeOv(); go('map');
+  setTimeout(() => showRoute({cat: 'ayuda', icon: 'ayuda', ll: h.ll, loc: {name: h.name}}), 260);
+});
+$('#helpBtn').addEventListener('click', () => {
+  const oln = D.help.find(h => /Niñez/.test(h.name)), juv = D.help.find(h => /Juventud/.test(h.name));
+  const cesfam = D.help.filter(h => /CESFAM|CESAM|Consultorio/.test(h.name)).map(h => ({h, d: dist(home(), h.ll)})).sort((a, b) => a.d - b.d)[0];
+  HELP_MAP = [oln, juv, cesfam && cesfam.h];
+  const onMap = i => HELP_MAP[i] && HELP_MAP[i].ll ? ` <button class="call" data-help-map="${i}">${icon('mapa')} Ver en el mapa</button>` : '';
+  openOv(`<div class="ov-body"><div class="ov-top"><button class="iconbtn" data-x aria-label="Cerrar">${icon('x')}</button></div>
+    <h1>Ayuda</h1><p class="lead">Si algo te preocupa, no estás solo/a. Aquí hay personas para escucharte.</p>
+    <div class="hl">
+      <div class="hcard urgent"><b>Si estás en peligro ahora</b><p>Llama gratis desde cualquier celular. El 147 es de Carabineros para niños, niñas y adolescentes: es confidencial y atiende las 24 horas.</p><a href="tel:133">${icon('phone')} 133 Carabineros</a> <a href="tel:147" style="margin-top:6px">${icon('phone')} 147 Fono Niños</a></div>
+      ${oln ? `<div class="hcard"><b>Oficina Local de la Niñez</b><p>Te escuchan y ayudan a ti y a tu familia. ${esc(oln.address)}.</p><a href="mailto:oficinadelaninez@loespejo.cl">${icon('info')} Escribir a la Oficina de la Niñez</a>${onMap(0)}</div>` : ''}
+      ${juv ? `<div class="hcard"><b>Oficina Municipal de Juventud</b><p>Para jóvenes desde 15 años. ${esc(juv.address)}.</p>${onMap(1)}</div>` : ''}
+      ${cesfam ? `<div class="hcard"><b>${esc(cesfam.h.name)}</b><p>Tu centro de salud más cercano, a ${walkMin(cesfam.d)} min caminando. ${esc(cesfam.h.address)}.</p>${onMap(2)}</div>` : ''}
+      <div class="hcard"><b>*4141 No estás solo, no estás sola</b><p>Si sientes que no puedes más, llama. Es gratis, las 24 horas, y te atiende un psicólogo o psicóloga del Ministerio de Salud.</p><a href="tel:*4141">${icon('phone')} Llamar *4141</a></div>
+    </div><p class="src">OLN, Juventud y CESFAM: visor CIT-UAI. 147 y *4141 verificados en ChileAtiende y MINSAL (sept. 2026).</p></div>`, 'help-ov');
+});
+
+/* ============ PLANNER (municipal view) ============ */
+function planner() {
+  const stats = D.uv.map(u => {
+    const locs = [...LOCS.values()].filter(L => L.uv === u.uv);
+    const sites = locs.filter(L => L.items.some(i => i.kind === 'act')).length;
+    const young = locs.filter(L => L.items.some(i => i.kind === 'act' && i.ages[0] <= 12)).length;
+    const seed = [...u.uv].reduce((s, c) => s + c.charCodeAt(0), 0);
+    return {...u, sites, young, per: sites ? Math.round(u.kids / sites) : null, checkins: Math.round(u.kids * (0.08 + (seed % 7) / 60))};
+  }).sort((a, b) => b.kids - a.kids);
+  const color = s => s.sites === 0 ? '#E0442E' : s.per > 400 ? '#FF8A3D' : s.per > 200 ? '#FFC23D' : '#9BD65A';
+  const all = D.uv.flatMap(u => u.ring);
+  const minY = Math.min(...all.map(p => p[0])), maxY = Math.max(...all.map(p => p[0]));
+  const minX = Math.min(...all.map(p => p[1])), maxX = Math.max(...all.map(p => p[1]));
+  const k = Math.cos(rad((minY + maxY) / 2)), W = 600, H = W * (maxY - minY) / ((maxX - minX) * k);
+  const P = ll => [(ll[1] - minX) / (maxX - minX) * W, (maxY - ll[0]) / (maxY - minY) * H];
+  const kids = stats.reduce((s, u) => s + u.kids, 0), sites = stats.reduce((s, u) => s + u.sites, 0);
+  const deserts = stats.filter(s => s.young === 0).map(s => s.uv);
+  const falta = [['Luz de noche', 38], ['Sombra', 31], ['Me sentí inseguro/a', 24], ['Baños', 22], ['Juegos para mi edad', 19], ['Agua para tomar', 15]];
+  $('#planner').innerHTML = `<div class="ph"><button class="pbtn" data-close-planner>${'← Volver a la app'}</button><h1>Reflejo · Panel municipal</h1>
+    <span class="tag demo">Oferta y población: datos reales · Uso: simulado</span></div>
+    <div class="kpis"><div class="kpi"><b>${kids.toLocaleString('es-CL')}</b><span>Niñas, niños y adolescentes de 8 a 17 (Censo 2024)</span></div>
+      <div class="kpi"><b>${sites}</b><span>Lugares con talleres para 8–17 dentro de las 15 UV (visor CIT-UAI)</span></div>
+      <div class="kpi"><b>${deserts.length}</b><span>Barrios sin talleres para menores de 13: UV ${deserts.join(', ')}</span></div>
+      <div class="kpi demo"><b>${stats.reduce((s, u) => s + u.checkins, 0).toLocaleString('es-CL')}</b><span>Check-ins último mes (demo)</span></div></div>
+    <div class="grid"><div class="panel"><h2 style="font-family:var(--f-display)">Niños por lugar con talleres, por unidad vecinal</h2>
+      <svg id="uvsvg" viewBox="-10 -10 ${W + 20} ${H + 20}" style="width:100%;height:auto">${stats.map(u => { const c = P(centroid(u.ring));
+        return `<path d="M${u.ring.map(p => P(p).map(v => v.toFixed(1)).join(' ')).join('L')}Z" fill="${color(u)}"><title>UV ${u.uv}: ${u.kids} niños, ${u.sites} lugares</title></path><text x="${c[0].toFixed(0)}" y="${c[1].toFixed(0)}" text-anchor="middle">${u.uv}</text>`; }).join('')}</svg>
+      <div class="legend"><span><i style="background:#9BD65A"></i>&lt;200 niños por lugar</span><span><i style="background:#FFC23D"></i>200–400</span><span><i style="background:#FF8A3D"></i>&gt;400</span><span><i style="background:#E0442E"></i>sin talleres</span></div>
+      <p class="src">El color mide niños de 8 a 17 por lugar con talleres de cualquier edad. El indicador de arriba cuenta barrios sin ningún taller para menores de 13.</p>
+      <h2 style="font-family:var(--f-display);margin-top:14px">Check-ins por lugar, último mes <span class="tag demo">demo</span></h2>
+      <table><thead><tr><th>Lugar</th><th>Check-ins</th><th>Qué falta (≥10 respuestas)</th></tr></thead><tbody>
+      ${albumLocs().slice(0, 6).map((L, i) => `<tr><td>${esc(L.name)}</td><td>${[212, 164, 131, 97, 58, 12][i]}</td><td>${i < 5 ? ['Luz de noche (38 de 61)', 'Sombra (22 de 40)', 'Baños (19 de 33)', 'Juegos para mi edad (11 de 24)', 'Basureros (10 de 14)'][i] : 'menos de 10 respuestas: no se muestra'}</td></tr>`).join('')}</tbody></table>
+      <button class="pbtn" style="margin-top:12px" data-reply>Responder a los niños</button><span class="src" id="replyNote" style="margin-left:8px"></span></div>
+    <div class="panel"><h2 style="font-family:var(--f-display)">Qué falta, según los niños <span class="tag demo">demo</span></h2>
+      ${falta.map(([t, v]) => `<div class="bar"><span>${t}</span><i style="width:${v * 2.4}%"></i><b>${v}%</b></div>`).join('')}
+      <p class="src">% de calificaciones que marcan cada tag. Solo lugares con 10 o más respuestas (k-anonimato).</p>
+      <h2 style="font-family:var(--f-display);margin-top:14px">Lo que piden y no existe cerca <span class="tag demo">demo</span></h2>
+      ${[['Skate y patines', 41, '1 lugar'], ['Música', 37, `${D.activities.filter(a => a.type === 'musica').reduce((n, a) => n + a.sites.length, 0)} talleres`], ['Piscina', 29, '0 lugares'], ['Ciclovía segura', 26, `${D.bike.length} tramos cortos`]].map(([t, v, o]) => `<div class="bar"><span>${t}</span><i style="width:${v * 2.4}%;background:#FF6FA3"></i><b>${v}%</b></div><p class="src" style="margin:-4px 0 6px 158px">oferta actual: ${o}</p>`).join('')}
+      <h2 style="font-family:var(--f-display);margin-top:14px">Por unidad vecinal</h2>
+      <table><thead><tr><th>UV</th><th>Niños 8–17</th><th>Lugares</th><th>Niños/lugar</th><th>Check-ins (demo)</th></tr></thead>
+      <tbody>${stats.map(u => `<tr><td>${u.uv}</td><td>${u.kids.toLocaleString('es-CL')}</td><td>${u.sites}</td><td>${u.per ?? '—'}</td><td>${u.checkins}</td></tr>`).join('')}</tbody></table></div></div>`;
+  $('#planner').classList.add('on');
+}
+$('#planner').addEventListener('click', e => {
+  if (e.target.closest('[data-close-planner]')) $('#planner').classList.remove('on');
+  if (e.target.closest('[data-reply]')) $('#replyNote').textContent = 'Publicado en el álbum de los niños y niñas de esos barrios (demo).';
+});
+
+/* ============ NAV, MODE, LOCATION, TIPS ============ */
+const ORDER = ['map', 'agenda', 'album', 'yo'];
+let curView = 'map';
+function go(v) {
+  const dir = Math.sign(ORDER.indexOf(v) - ORDER.indexOf(curView)); curView = v;
+  $$('.view').forEach(x => { if (x.id === 'v-' + v && !x.classList.contains('on')) x.style.setProperty('--from', `${dir * 32}px`);
+    else if (x.classList.contains('on')) x.style.setProperty('--from', `${-dir * 32}px`); });
+  $$('.view').forEach(x => x.classList.toggle('on', x.id === 'v-' + v));
+  $$('.nav button').forEach(b => b.dataset.view === v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
+  closeSheet();
+  if (v === 'agenda') renderAgenda();
+  if (v === 'album') renderAlbum();
+  if (v === 'yo') renderYo();
+  if (v === 'map' && map) setTimeout(() => { map.invalidateSize(); ensureVisible(); }, 50);
+}
+$$('.nav button').forEach(b => b.addEventListener('click', () => go(b.dataset.view)));
+$('#brandBtn').addEventListener('click', () => go('map'));
+function setMode(m) {
+  S.mode = m; save(); app.dataset.mode = m;
+  document.querySelector('meta[name="theme-color"]').content = m === 'night' ? '#15142A' : '#FFF5E6';
+  setTiles();
+  $$('[data-demo-mode]').forEach(b => b.setAttribute('aria-pressed', b.dataset.demoMode === m));
+  $('#albumLbl').textContent = m === 'night' ? 'Lugares' : 'Álbum';
+}
+document.addEventListener('click', e => {
+  const m = e.target.closest('[data-demo-mode]');
+  if (m) {  // demo: the mode buttons stand for a 10 and a 15 year old
+    setMode(m.dataset.demoMode);
+    if (S.onboarded) { S.age = m.dataset.demoMode === 'night' ? 15 : 10; save(); refresh(); ensureVisible(); }
+    if ($('#v-yo').classList.contains('on')) renderYo();
+    if ($('#v-album').classList.contains('on')) renderAlbum();
+    return;
+  }
+  const d = e.target.closest('[data-demo]'); if (!d) return;
+  if (d.dataset.demo === 'reset') { try { localStorage.removeItem(KEY); } catch {} S = {...FRESH}; closeOv(); closeSheet(); setMode('day'); go('map'); refresh(); hello(); }
+  if (d.dataset.demo === 'guardian') guardian();
+  if (d.dataset.demo === 'planner') planner();
+});
+$('#locBtn').addEventListener('click', () => {
+  const was = S.loc; S.loc = true; save(); $('#locPill').classList.add('on'); clearRoute();
+  if (map) map.flyTo(home(), 16, {duration: REDUCED ? 0 : .6});
+  toast(was ? 'Volvimos a tu punto de partida' : 'Ubicación activa solo mientras usas el mapa (demo)');
+});
+$('#locStop').addEventListener('click', () => { S.loc = false; save(); $('#locPill').classList.remove('on'); toast('Ubicación apagada'); });
+let tipT;
+function tipOnce(text) {
+  if (!text) return;
+  $('#tipText').textContent = text; $('#tip').classList.add('on');
+  clearTimeout(tipT); tipT = setTimeout(() => $('#tip').classList.remove('on'), 6000);
+}
+function refresh() {
+  $('#where').textContent = S.homeLabel ? (S.homeLabel === 'tu barrio' ? 'Tu barrio' : 'Tu colegio') : 'Lo Espejo';  // never the school's name on screen
+  renderChips(); renderPins(); renderCards();
+  $('#locPill').classList.toggle('on', !!S.loc);
+}
+function presenterFacts() {
+  const kids = D.uv.reduce((s, u) => s + u.kids, 0);
+  const venues = new Set(D.activities.flatMap(a => a.sites.map(x => x.ll.map(v => v.toFixed(4)).join(',')))).size;
+  $('#pFacts').innerHTML = [[D.activities.length, 'talleres gratis reales'], [venues, 'lugares donde se hacen'],
+    [D.places.length, 'plazas, canchas y espacios'], [kids.toLocaleString('es-CL'), 'niñas, niños y adolescentes 8–17']]
+    .map(([b, s]) => `<div class="pfact"><b>${b}</b><span>${s}</span></div>`).join('');
+}
+
+// QA hook for tools/shoot.sh and the critic (read-only helpers, no data)
+window.__qa = {center: () => map && map.getCenter(), zoom: () => map && map.getZoom(), home, fitNearby, ensureVisible,
+  clear: () => { if (!map) return -1; const {x: w, y: h} = map.getSize(); return [...LOCS.values()].filter(L => L.visible && L.visible.length).filter(L => { const p = map.latLngToContainerPoint(L.ll); return p.x > 20 && p.x < w - 20 && p.y > 225 && p.y < h - 210; }).length; },
+  size: () => map && map.getSize()};
+/* ---------- boot ---------- */
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+try { initMap(); } catch (err) { console.warn('Map fallback', err); map = null; fallbackMap(); }
+setMode(S.mode); presenterFacts(); refresh(); badge();
+if (!S.onboarded) setTimeout(hello, REDUCED ? 0 : 500);
+})();
+</script>
+</body>
+</html>
